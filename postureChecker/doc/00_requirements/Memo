@@ -1,0 +1,49 @@
+
+[FREETEXT]
+No requirement on the blinking LED during waiting for the USB connection.
+
+Check if there is a requirements for
+* Which reports to enable for bno
+
+Designs
+* Configuration for each sensor.
+* Format of the sensor sets
+* Configuration of the fs
+* check if each sensor is found during startup
+
+* EI forwarder
+
+* debug prints lsdir
+* erase the flash on request.
+* how to mount the disk on the host system
+
+* BLE
+** What to advertise
+** When to activate the accept list. Descript the security concept.
+** The PHY, MTU, channel parameters
+** What to do while there is no OOB for dev. Passkey, auth
+** Identidy resolvement
+** Details of MDS
+** Details of NUS, NUS shell?
+** limitation of connections
+
+Modifications of CCC callback
+
+Basis for sensor enabling.
+Why not within Zephyr?
+
+Sensor Module
+
+Related Modules
+* Persistence
+** Append to a file.
+* BLE
+* Sensor Libraries
+** ADC1015
+** BNO
+** IMU
+
+Interfaces
+
+Startup
+[/FREETEXT]

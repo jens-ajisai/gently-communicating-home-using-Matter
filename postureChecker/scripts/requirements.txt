@@ -1,0 +1,4 @@
+bleak
+memfault-cli
+pyserial-asyncio
+strictdoc

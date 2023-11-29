@@ -1,0 +1,185 @@
+@startuml
+
+title Bridge Handling of BLE Sensors
+
+participant "Main" as main
+participant "USB" as usb
+participant "App Task" as app
+participant "Bridge Manager" as bm
+participant "BLE Connectivity Manager" as bcm
+participant "Matter Device" as md
+participant "BLE Device" as bd
+participant "OOB Exchange Manager" as oem
+participant "Bluetooth Stack" as bt
+participant "Matter Stack" as m
+
+== Startup ==
+
+activate main
+    main->usb ++ : initUSB()
+    usb->? : usb_enable()
+    usb->usb : wait for UART DTR
+    usb-->main  --
+    main->app ++ : StartApp()
+    app->app : Init()
+    note right
+        same initialization as in the matter samples
+        Additionally call settings_load() to load bonded devices.
+    end note
+    loop while true
+        app->app : wait for event
+        app->app : DispatchEvent(event)
+    end loop
+    deactivate app
+
+== Initialize Bridge ==
+
+        ?->app ++ : 5 seconds after connected to\nThread network
+        app->app ++ : InitBridge();
+        app->bm ++ : PlatformMgr().ScheduleWork()\n  BridgeManager::Instance().Init(conf)
+        bm->? : emberAfEndpointEnableDisable
+        bm->bcm ++ : BLEConnectivityManager::Instance().Init()
+        bcm->bcm  : k_timer_init()  
+        bcm->bcm  : bt_scan_init(&scan_init);
+        bcm->bcm  : bt_scan_cb_register(&scan_cb);
+        bcm->bcm  : bt_conn_auth_info_cb_register(&conn_auth_info_callbacks);
+        bcm->bcm  : bt_conn_auth_cb_register(&conn_auth_callbacks);
+        bcm-->bm --
+        bm->md ++ : New<MatterDevice>(conf);
+        md-->bm --
+        bm->bm ++ : AddDeviceEndpoint(dev)
+        bm->? : emberAfSetDynamicEndpoint()
+        bm->md ++ : dev->Init();
+
+        md->md : k_timer_init(&mRecoveryTimer)
+        md->bcm ++ : BLEConnectivityManager::Instance().ConnectFirstBondedDevice
+        alt bonded device count > 0
+            bcm->bcm : Instance().Connect(&info->addr)
+            bcm-->md 
+        else bonded device count == 0
+            bcm-->md --
+            md->bcm ++ : BLEConnectivityManager::Instance().ExchangeOob()
+            bcm->oem ++ : OobExchangeManager::Instance().ExchangeOob();
+            oem-->bcm --
+            bcm-->md --
+            md->bcm ++ : BLEConnectivityManager::Instance().Scan(this, ConnectedCallbackEntry, mConf.filter)
+            bcm->bcm : PrepareFilterForUuid()
+            bcm->? : bt_scan_start
+            bcm--> md--
+            ?->bcm : ScanResultCallback
+            bcm++
+            bcm->bcm ++: Instance().Connect()
+            bcm--
+            bcm--
+        end
+        md --> bm --
+        bm--
+        bm --> app --  
+        app--
+        app--
+        bt->>bcm ++ : Connecting()
+        bcm->>bt --
+
+
+
+        alt Connected
+            bt->>bcm ++ : ConnectionHandler()
+            bcm->md ++ : MatterDevice::ConnectedCallback()
+            md->bd ++ : mBleDevice->Discover()
+            bd->>bt : bt_gatt_dm_start
+            bd-->md --
+            md-->bcm --
+            bcm->>bt --
+            
+            bt->>bd -- : BleDevice::DiscoveryCompletedHandler
+            bd++
+            bd-->md -- : MatterDevice::DiscoveredCallback()
+            md++
+
+
+            loop foreach attribute to read
+                md->bd ++ : mBleDevice->Read
+                bd->>bt ++ : bt_gatt_read()
+                bd->bd : wait for callback
+                bt->>bd -- : GATTReadCallback()
+                bd->md --
+
+            end loop
+
+            loop foreach attribute to subscribe
+                md->bd ++ : mBleDevice->Subscribe
+                bd->>bt : bt_gatt_subscribe()
+                bd --> md --
+            end loop
+
+            md --
+
+        else Disconnected
+
+            bt->>bcm ++ : ConnectionHandler()
+            bcm->md ++ : MatterDevice::ConnectedCallback()
+            md->bd ++ : chip::Platform::Delete(mBleDevice);
+            bd->bd -- : k_timer_start(&mRecoveryTimer)
+            bd-->md --
+            md-->bcm --
+            bcm->>bt --
+
+        end
+
+        ?->md : MatterDevice::RecoveryTimeoutCallback()
+        group Recovery sequence
+            md->bcm : BLEConnectivityManager::Instance().ConnectFirstBondedDevice
+            note over bcm  
+                Same sequence as in dev->init() above
+            end note
+        end
+
+== Value update BLE -> Matter ==
+
+    bt->>bd ++ : BleDevice::SubscriptionHandler
+    bd->md ++ : MatterDevice::SubscriptionCallback
+    md->md : Save to attribute cache
+    md->bm ++ : BridgeManager::Instance().HandleUpdate(path);
+    bm-->md --    
+    md->m ++ : MatterReportingAttributeChangeCallback(*path);
+    m-->md --
+    md-->bd --
+    bd-->bt --
+
+== Matter Read Attribute Request ==
+
+    m->bm ++ : emberAfExternalAttributeReadCallback
+    bm->bm ++ : BridgeManager::Instance().HandleRead
+    alt read BridgedDeviceBasicInformation
+        bm->md ++ : device->HandleReadBridgedDeviceBasicInformation()
+        md-->bm --
+    else read Descriptor
+        bm->md ++ : device->HandleReadDescriptor()
+        md-->bm --
+    else
+        bm->md ++ : device->HandleRead()
+        md-->bm --: Return value from attribute cache
+    end
+    bm --
+    bm-->m --
+
+== Matter Write Attribute Request ==
+
+    m->bm ++ : emberAfExternalAttributeWriteCallback
+    bm->bm ++: BridgeManager::Instance().HandleWrite
+    bm->md ++ : device->HandleWrite()
+    md-->bm --: Return not implemented error
+    bm --
+    bm-->m --
+ 
+== Shutdown Bridge (never called!) ==
+
+    ?->bm ++ : RemoveDeviceEndpoint()
+    bm->m ++ : emberAfClearDynamicEndpoint()
+    m-->bm --
+    bm->md ++ : chip::Platform::Delete(dev)
+    md->bd ++ : chip::Platform::Delete(mBleDevice)
+    bd-->md --
+    md-->bm --
+    bm --
+@enduml

@@ -1,0 +1,73 @@
+#include <zephyr/dt-bindings/led/led.h>
+
+ / {
+	chosen {
+		zephyr,console = &uart0;
+		zephyr,shell-uart = &uart0;
+		nordic,pm-ext-flash = &gd25q16;
+		zephyr,entropy = &rng;
+	};
+
+	aliases {
+		led-strip = &neopixel_led;
+	};
+};
+
+zephyr_udc: &usbd {
+	usb_cdc_acm_uart: cdc-acm-uart {
+		compatible = "zephyr,cdc-acm-uart";
+	};
+};
+
+&pinctrl {
+	i2s0_default_alt: i2s0_default_alt {
+		group1 {
+			psels = <NRF_PSEL(I2S_SCK_M, 0, 20)>,
+				<NRF_PSEL(I2S_LRCK_M, 0, 19)>,
+				<NRF_PSEL(I2S_SDOUT, 1, 8)>,
+				<NRF_PSEL(I2S_SDIN, 0, 21)>;
+		};
+	};
+};
+
+i2s_led: &i2s0 {
+	status = "okay";
+	pinctrl-0 = <&i2s0_default_alt>;
+	pinctrl-names = "default";
+};
+
+/ {
+	neopixel_led: ws2812 {
+		compatible = "worldsemi,ws2812-i2s";
+
+		i2s-dev = < &i2s_led >;
+		chain-length = <14>; /* arbitrary; change at will */
+		color-mapping = 
+		<LED_COLOR_ID_GREEN>,
+		<LED_COLOR_ID_RED>,
+		<LED_COLOR_ID_BLUE>;
+		reset-delay = <120>;
+	};
+};
+
+
+
+/* Disable unused peripherals to reduce power consumption */
+&adc {
+	status = "disabled";
+};
+&i2c0 {
+	status = "disabled";
+};
+&i2c1 {
+	status = "disabled";
+};
+&pwm0 {
+	status = "disabled";
+};
+&spi2 {
+	status = "disabled";
+};
+//&uart0 {
+//	status = "disabled";
+//};

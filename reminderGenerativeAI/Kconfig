@@ -1,0 +1,24 @@
+# Config options for logger sample app
+
+# Copyright (c) 2018 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Home control with open.ai"
+
+menu "Application configuration"
+
+rsource "Kconfig.net"
+
+config OPENAI_API_KEY
+	string "API Key for Open.ai"
+	help
+	  Specify the API Key for Open.ai
+
+
+module = MAIN
+module-str = Home control by voice
+source "subsys/logging/Kconfig.template.log_config"
+
+endmenu
+
+source "Kconfig.zephyr"

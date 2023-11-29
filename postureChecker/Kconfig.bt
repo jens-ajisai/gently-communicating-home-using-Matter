@@ -1,0 +1,5 @@
+config APP_REQUIRE_OOB
+	bool "Sending values requires OOB security level"
+
+config APP_USER_FILTER_ACCESS_LIST
+	bool "After bonding, only accept connections from bonded device or activation by shell"

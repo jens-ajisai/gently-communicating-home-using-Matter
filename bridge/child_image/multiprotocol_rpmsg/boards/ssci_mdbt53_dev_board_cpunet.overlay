@@ -1,0 +1,17 @@
+/delete-node/ &timer0;
+/delete-node/ &timer1;
+/delete-node/ &timer2;
+
+/ {
+	chosen {
+		zephyr,console = &uart0;		
+	};
+};
+
+&uart0 {
+	current-speed = <115200>;
+	status = "okay";
+	pinctrl-0 = <&uart0_default>;
+	pinctrl-1 = <&uart0_sleep>;
+	pinctrl-names = "default", "sleep";
+};

@@ -1,0 +1,206 @@
+// Used for NRF_DRIVE_H0H1
+#include <zephyr/dt-bindings/gpio/nordic-nrf-gpio.h>
+// Used for PRIO_COOP
+#include <zephyr/dt-bindings/ipc_service/static_vrings.h>
+
+/delete-node/ &mx25r64;
+
+/ {
+	chosen {
+		zephyr,console = &cdc_acm_uart;
+		zephyr,shell-uart = &cdc_acm_uart;
+//		zephyr,console = &uart0;
+//		zephyr,shell-uart = &uart0;
+		nordic,pm-ext-flash = &w25q128jv;
+		zephyr,flash-controller = &w25q128jv;
+	};
+
+	fstab {
+		compatible = "zephyr,fstab";
+		lfs1: lfs1 {
+			compatible = "zephyr,fstab,littlefs";
+			mount-point = "/lfs1";
+//			automount;
+			partition = <&lfs1_part>;
+			read-size = <16>;
+			prog-size = <16>;
+			cache-size = <64>;
+			lookahead-size = <32>;
+			block-cycles = <512>;
+		};
+	};
+};
+
+/* Set IPC thread priority to the highest value to not collide with other threads. */
+&ipc0 {
+    zephyr,priority = <0 PRIO_COOP>;
+};
+
+
+&i2c1 {
+	status = "disabled";
+};
+
+&spi3 {
+	status = "disabled";
+};
+
+&adc {
+	status = "disabled";
+};
+
+
+&uart0_default {
+	group1 {
+		psels = <NRF_PSEL(UART_TX, 0, 12)>,
+				<NRF_PSEL(UART_RX, 0, 19)>,
+				<NRF_PSEL(UART_RTS, 0, 20)>,
+				<NRF_PSEL(UART_CTS, 0, 21)>;
+	};
+};
+
+&uart0_sleep {
+	group1 {
+		psels = <NRF_PSEL(UART_TX, 0, 12)>,
+				<NRF_PSEL(UART_RX, 0, 19)>,
+				<NRF_PSEL(UART_RTS, 0, 20)>,
+				<NRF_PSEL(UART_CTS, 0, 21)>;
+		low-power-enable;
+	};
+};
+
+&uart0 {
+	current-speed = <115200>;
+	status = "okay";
+	pinctrl-0 = <&uart0_default>;
+	pinctrl-1 = <&uart0_sleep>;
+	pinctrl-names = "default", "sleep";
+};
+
+&pinctrl {
+	uart2_default: uart2_default {
+		group1 {
+			psels = <NRF_PSEL(UART_TX, 0, 10)>,
+					<NRF_PSEL(UART_RX, 0, 11)>,
+					<NRF_PSEL(UART_RTS, 0, 24)>,
+					<NRF_PSEL(UART_CTS, 0, 25)>;
+		};
+	};
+
+	uart2_sleep: uart2_sleep {
+		group1 {
+			psels = <NRF_PSEL(UART_TX, 0, 10)>,
+					<NRF_PSEL(UART_RX, 0, 11)>,
+					<NRF_PSEL(UART_RTS, 0, 24)>,
+					<NRF_PSEL(UART_CTS, 0, 25)>;
+			low-power-enable;
+		};
+	};
+};
+
+&uart2 {
+	current-speed = <115200>;
+	status = "okay";
+	pinctrl-0 = <&uart2_default>;
+	pinctrl-1 = <&uart2_sleep>;
+	pinctrl-names = "default", "sleep";
+	// lpuart: nrf-sw-lpuart {
+	// 	compatible = "nordic,nrf-sw-lpuart";
+	// 	status = "okay";
+	// 	req-pin = <7>;
+	// 	rdy-pin = <9>;
+	// };	
+};
+
+//gpiote {
+//	interrupts = <13 NRF_DEFAULT_IRQ_PRIORITY>;
+//;
+//
+//&timer2 {
+//	status = "okay";
+//};
+//
+//&rtc0 {
+//	status = "okay";
+//};
+
+&qspi_default {
+	group1 {
+		psels = <NRF_PSEL(QSPI_SCK, 0, 17)>,
+				<NRF_PSEL(QSPI_IO0, 0, 13)>,
+				<NRF_PSEL(QSPI_IO1, 0, 14)>,
+				<NRF_PSEL(QSPI_IO2, 0, 15)>,
+				<NRF_PSEL(QSPI_IO3, 0, 16)>,
+				<NRF_PSEL(QSPI_CSN, 0, 18)>;
+				nordic,drive-mode = <NRF_DRIVE_H0H1>;
+		};
+	};
+
+&qspi_sleep {
+	group1 {
+		psels = <NRF_PSEL(QSPI_SCK, 0, 17)>,
+				<NRF_PSEL(QSPI_IO0, 0, 13)>,
+				<NRF_PSEL(QSPI_IO1, 0, 14)>,
+				<NRF_PSEL(QSPI_IO2, 0, 15)>,
+				<NRF_PSEL(QSPI_IO3, 0, 16)>;
+//		nordic,drive-mode = <NRF_DRIVE_H0H1>;
+		low-power-enable;
+	};
+	group2 {
+		psels = <NRF_PSEL(QSPI_CSN, 0, 18)>;
+//		nordic,drive-mode = <NRF_DRIVE_H0H1>;
+		low-power-enable;
+		bias-pull-up;
+	};
+};
+
+&qspi {
+	status = "okay";
+	pinctrl-0 = <&qspi_default>;
+	pinctrl-1 = <&qspi_sleep>;
+	pinctrl-names = "default", "sleep";
+	w25q128jv: w25q128jv@0 {
+		compatible = "nordic,qspi-nor";
+		reg = < 0 >;
+		sck-frequency = <8000000>;
+		// Check the datasheet for the supported commands by the command id.
+		writeoc = "pp4o";   // Quad data line SPI, PP4O (0x32)
+		readoc = "read4io"; // Quad data line SPI, READ4IO (0xEB)
+		// Property value must be one of NONE, S2B1v1, S1B6, S2B7, S2B1v4, S2B1v5, S2B1v6
+		// The QE is register 2 bit 1
+		// I found the appropriate values by running the sample
+		//   zephyr/samples/drivers/jesd216. It will print out the values below.
+		quad-enable-requirements = "S2B1v4";
+		jedec-id = [ef 40 18];
+		sfdp-bfp = [
+			e5 20 f9 ff  ff ff ff 07  44 eb 08 6b  08 3b 42 bb
+            fe ff ff ff  ff ff 00 00  ff ff 40 eb  0c 20 0f 52
+            10 d8 00 00  36 02 a6 00  82 ea 14 c9  e9 63 76 33
+            7a 75 7a 75  f7 a2 d5 5c  19 f7 4d ff  e9 30 f8 80
+		];
+		size = < DT_SIZE_M(16*8) >;
+		// Check the datasheet if command DPD (0xB9) is supported.
+		has-dpd;
+		t-enter-dpd = < 3500 >;
+		t-exit-dpd = < 3500 >;
+
+		// https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/scripts/partition_manager/partition_manager.html#ug-pm-static-providing
+		// When you build a multi-image application using the Partition Manager, the devicetree source flash partitions are ignored.
+		//
+		// Littlefs uses a partition called littlefs_storage.
+		// Memfault uses memfault_storage.
+		// Settings uses settings_storage.
+		// See nrf/subsys/partition_manager/pm.yml.*
+		
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			lfs1_part: partition@0 {
+				label = "flash-storage";
+				reg = <0x00000000 0x01000000>;
+			};
+		};
+	};
+};
+

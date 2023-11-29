@@ -1,0 +1,91 @@
+/delete-node/ &mx25r64;
+/delete-node/ &timer0;
+/delete-node/ &timer1;
+/delete-node/ &timer2;
+
+/ {
+	chosen {
+//		zephyr,uart-mcumgr = &uart0;
+		nordic,pm-ext-flash = &w25q128jv;
+	};
+};
+
+&uart0 {
+	current-speed = <115200>;
+	status = "disabled";
+	pinctrl-0 = <&uart0_default>;
+	pinctrl-1 = <&uart0_sleep>;
+	pinctrl-names = "default", "sleep";
+};
+
+&qspi_default {
+	group1 {
+		psels = <NRF_PSEL(QSPI_SCK, 0, 17)>,
+		  <NRF_PSEL(QSPI_IO0, 0, 13)>,
+		  <NRF_PSEL(QSPI_IO1, 0, 14)>,
+		  <NRF_PSEL(QSPI_IO2, 0, 15)>,
+		  <NRF_PSEL(QSPI_IO3, 0, 16)>,
+		  <NRF_PSEL(QSPI_CSN, 0, 18)>;
+		  nordic,drive-mode = <NRF_DRIVE_H0H1>;
+		};
+	};
+
+&qspi_sleep {
+	group1 {
+		psels = <NRF_PSEL(QSPI_SCK, 0, 17)>,
+			<NRF_PSEL(QSPI_IO0, 0, 13)>,
+			<NRF_PSEL(QSPI_IO1, 0, 14)>,
+			<NRF_PSEL(QSPI_IO2, 0, 15)>,
+			<NRF_PSEL(QSPI_IO3, 0, 16)>;
+		low-power-enable;
+	};
+	group2 {
+		psels = <NRF_PSEL(QSPI_CSN, 0, 18)>;
+		low-power-enable;
+		bias-pull-up;
+	};
+};
+
+&qspi {
+	status = "okay";
+	pinctrl-0 = <&qspi_default>;
+	pinctrl-1 = <&qspi_sleep>;
+	pinctrl-names = "default", "sleep";
+	w25q128jv: w25q128jv@0 {
+		compatible = "nordic,qspi-nor";
+		reg = <0>;
+		sck-frequency = <8000000>;
+		writeoc = "pp4o";
+		readoc = "read4io";
+		// Property value must be one of NONE, S2B1v1, S1B6, S2B7, S2B1v4, S2B1v5, S2B1v6
+		// The QE is register 2 bit 1
+		quad-enable-requirements = "S2B1v4";
+		jedec-id = [ef 40 18];
+		sfdp-bfp = [
+			e5 20 f9 ff  ff ff ff 07  44 eb 08 6b  08 3b 42 bb
+            fe ff ff ff  ff ff 00 00  ff ff 40 eb  0c 20 0f 52
+            10 d8 00 00  36 02 a6 00  82 ea 14 c9  e9 63 76 33
+            7a 75 7a 75  f7 a2 d5 5c  19 f7 4d ff  e9 30 f8 80
+		];
+		size = < DT_SIZE_M(16*8) >;
+		has-dpd;
+		t-enter-dpd = < 3500 >;
+		t-exit-dpd = < 3500 >;
+    };
+};
+
+&pwm0 {
+    status = "disabled";
+};
+
+&adc {
+    status = "disabled";
+};
+
+&spi3 {
+    status = "disabled";
+};
+
+&i2c1 {
+    status = "disabled";
+};

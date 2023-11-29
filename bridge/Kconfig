@@ -1,0 +1,46 @@
+#
+# Copyright (c) 2023 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+mainmenu "Matter nRF Connect Bridge Example Application"
+
+if NET_L2_OPENTHREAD
+
+choice OPENTHREAD_NORDIC_LIBRARY_CONFIGURATION
+	default OPENTHREAD_NORDIC_LIBRARY_FTD
+endchoice
+
+choice OPENTHREAD_DEVICE_TYPE
+	default OPENTHREAD_FTD
+endchoice
+
+endif # NET_L2_OPENTHREAD
+
+config BRIDGE_MAX_DYNAMIC_ENDPOINTS_NUMBER
+	int "Maximum number of dynamic endpoints supported by the Bridge"
+	default 16
+
+config BRIDGE_BT_RECOVERY_INTERVAL_MS
+	int "Time (in ms) between recovery attempts when the BLE connection to the bridged device is lost"
+	default 10000
+
+config BRIDGE_BT_RECOVERY_SCAN_TIMEOUT_MS
+	int "Time (in ms) within which the Bridge will try to re-establish a connection to the lost BT LE device"
+	default 2000
+
+
+
+source "${ZEPHYR_BASE}/../modules/lib/matter/config/nrfconnect/chip-module/Kconfig.features"
+source "${ZEPHYR_BASE}/../modules/lib/matter/config/nrfconnect/chip-module/Kconfig.defaults"
+source "Kconfig.zephyr"
+
+# Required to be able to do 
+# list(APPEND multiprotocol_rpmsg_b0n_OVERLAY_CONFIG overlay-minimal-size.conf)
+# list(APPEND hci_rpmsg_b0n_OVERLAY_CONFIG overlay-minimal-size.conf)
+# in CMakeLists.txt
+module=HCI_RPMSG
+source "${ZEPHYR_BASE}/../nrf/subsys/partition_manager/Kconfig.template.build_strategy"
+
+module=MULTIPROTOCOL_RPMSG
+source "${ZEPHYR_BASE}/../nrf/subsys/partition_manager/Kconfig.template.build_strategy"

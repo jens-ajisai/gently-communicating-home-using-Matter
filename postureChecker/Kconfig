@@ -1,0 +1,22 @@
+mainmenu "Posture checker application"
+
+menu "Application configuration"
+
+rsource "Kconfig.ei"
+rsource "Kconfig.bt"
+rsource "Kconfig.flash"
+
+config USE_SIMULATION_DATA
+	bool "Use simulation data instead of sensor input."
+
+module = MAIN
+module-str = Posture checker app main
+source "subsys/logging/Kconfig.template.log_config"
+
+module = SENSORS
+module-str = Sensors module
+source "subsys/logging/Kconfig.template.log_config"
+
+endmenu
+
+source "Kconfig.zephyr"

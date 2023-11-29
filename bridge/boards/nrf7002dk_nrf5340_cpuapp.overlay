@@ -1,0 +1,24 @@
+#include <zephyr/dt-bindings/ipc_service/static_vrings.h>
+
+/delete-node/ &gpio_fwd;
+
+/ {
+	chosen {
+		zephyr,console = &uart0;
+		zephyr,shell-uart = &uart0;		
+		nordic,pm-ext-flash = &mx25r64;
+	};
+};
+
+/* Set IPC thread priority to the highest value to not collide with other threads. */
+&ipc0 {
+    zephyr,priority = <0 PRIO_COOP>;
+};
+
+&uart1 {
+	current-speed = <115200>;
+	status = "okay";
+	pinctrl-0 = <&uart1_default>;
+	pinctrl-1 = <&uart1_sleep>;
+	pinctrl-names = "default", "sleep";
+};

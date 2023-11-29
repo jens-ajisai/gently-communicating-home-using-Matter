@@ -1,0 +1,8 @@
+config APP_WIPE_STORAGE
+	bool "Option to clear the flash area before mounting"
+	help
+	  Use this to force an existing file system to be created.
+
+module = APP_FLASH_LITTLEFS
+module-str = Flash Filesystem Utilities
+source "subsys/logging/Kconfig.template.log_config"

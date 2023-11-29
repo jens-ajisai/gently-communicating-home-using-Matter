@@ -1,0 +1,6 @@
+sample:
+  description: Feedback Light
+  name: Feedback Light
+tests:
+  gentlyCommunicatingHome.feedback_light:
+    platform_allow: adafruit_feather_nrf52840 xiao_ble_sense

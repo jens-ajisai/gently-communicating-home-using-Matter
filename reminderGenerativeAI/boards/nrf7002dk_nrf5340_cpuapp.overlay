@@ -1,0 +1,40 @@
+/ {
+	chosen {
+		nordic,pm-ext-flash = &mx25r64;
+	};
+
+	msc_disk0 {
+		compatible = "zephyr,flash-disk";
+		partition = <&ffs1_part>;
+		disk-name = "NAND";
+		cache-size = <4096>;
+	};
+};
+
+&pinctrl {
+	pdm0_default_alt: pdm0_default_alt {
+		group1 {
+			psels = <NRF_PSEL(PDM_CLK, 1, 11)>,
+				<NRF_PSEL(PDM_DIN, 1, 12)>;
+		};
+	};
+};
+
+dmic_dev: &pdm0 {
+	status = "okay";
+	pinctrl-0 = <&pdm0_default_alt>;
+	pinctrl-names = "default";
+	clock-source = "PCLK32M_HFXO";
+};
+
+&mx25r64 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		ffs1_part: partition@0 {
+			reg = <0x00000000 0x00800000>;
+		};
+	};
+};

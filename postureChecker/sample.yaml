@@ -1,0 +1,9 @@
+sample:
+  description: posture checker for the make it matter contest
+  name: posture checker
+tests:
+  posture_checker.debug:
+    build_only: true
+    integration_platforms:
+      - xiao_ble_sense
+    platform_allow: xiao_ble_sense

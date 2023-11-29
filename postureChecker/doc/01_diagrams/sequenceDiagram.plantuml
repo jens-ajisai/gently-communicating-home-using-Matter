@@ -1,0 +1,106 @@
+@startuml
+
+title Posture Checker
+
+participant "Shell" as shell
+participant "USB" as usb
+participant "Main Function" as main
+participant "Persistence" as pers
+participant "Sensor Aggregator" as sensors
+participant "BNO08x" as bno
+participant "ADS1015" as adc
+participant "Bluetooth" as bt
+participant "EI Forwarder" as eif
+participant "Edge Impulse" as ei
+participant "UART" as uart
+
+uart++
+uart -> uart ++ : listen for oob message
+?-> uart : receive remote oob data message
+uart->uart : parse remote oob data
+uart->bt ++: set remote oob data
+bt->uart --
+uart->bt ++: get local oob data
+bt->uart --
+uart->? : send local oob data message
+uart->uart : exit
+uart--
+
+
+main ++
+main -> usb ++ : initUSB()
+usb -> usb : wait max 5 seconds for UART DTR
+usb --> main --
+
+main -> pers ++ : init persistence
+pers -> pers : read flash info\nerase flash on first time\nmount filesystem\nprint info\nlist files
+pers --> main --
+
+main -> bno ++ : create SensorBno08x
+bno --> main --
+main -> adc ++ : create SensorFlex
+adc --> main --
+main -> sensors ++ : create SensorAggregator
+
+sensors -> sensors ++ : init sensor aggregator
+sensors -> bno ++ : init sensor
+bno --> sensors --
+sensors -> adc ++ : init sensor
+adc --> sensors --
+sensors --
+sensors --> main --
+
+
+main -> bt ++ : init bluetooth
+bt -> bt : register callbacks\nregister services
+bt -> bt : enable bluetooth
+bt -> bt : load settings
+bt -> bt : create local oob keys
+bt -> bt : submit advertisment work
+bt --> main --
+
+
+
+main -> eif ++ : ei_data_forwarder_init()
+eif -> bt ++ : register nus service
+bt --> eif --
+eif -> eif : init uart
+eif --> main --
+
+?-> uart : receive remote oob data message
+uart->uart : parse remote oob data
+uart->bt ++: set remote oob data
+bt->uart --
+uart->bt ++: get local oob data
+bt->uart --
+uart->? : send local oob data message
+uart->uart : exit
+uart--
+
+?-> bt : connection request
+?-> bt : subscription request
+
+group Every second
+    main ->?  : get current time
+    main -> sensors ++ : collect data
+    sensors -> bno ++ : read data
+    bno --> sensors -- : return data
+    sensors -> adc ++ : read data
+    adc --> sensors -- : return data
+    sensors --> main -- : return data
+    main -> ei ++ : infer posture score
+    ei --> main --
+    main -> bt ++ : send posture score
+    bt -> bt : notify subscribers if security with oob
+    bt --> main --
+    main -> pers ++ : write posture data to file
+    pers -> main --
+end
+
+shell++
+shell -> pers ++ : read posture score file
+pers -> pers : print posture scores in csv format
+pers --> shell --
+shell --
+
+@enduml

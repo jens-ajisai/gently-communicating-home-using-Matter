@@ -1,0 +1,48 @@
+[project]
+title = "Make it Matter Communicating House"
+
+html_assets_strictdoc_dir = "assets"
+
+include_doc_paths = [
+  "doc/00_requirements/**"
+]
+
+exclude_doc_paths = [
+  "doc/00_requirements/bike/**"
+]
+
+include_source_paths = [
+  "**"
+]
+
+exclude_source_paths = [
+  "*env/**",
+  "build/**",
+  "doc/**",
+  "ext/**",
+  "scripts/ENV/**",
+  "*gitignore",
+  "README.rst",
+  "sample.yaml",
+  "strictdoc.toml",
+]
+
+features = [
+  # stable features
+  "TABLE_SCREEN",
+  "DEEP_TRACEABILITY_SCREEN",  
+
+  # experimental features
+  "REQUIREMENTS_COVERAGE_SCREEN",  
+  "REQUIREMENT_TO_SOURCE_TRACEABILITY",
+
+  # deactivated features
+  # "MATHJAX",
+  # "REQIF",
+  # "TRACEABILITY_SCREEN",
+  # "STANDALONE_DOCUMENT_SCREEN",
+]
+
+[server]
+host = "localhost"
+port = 8000

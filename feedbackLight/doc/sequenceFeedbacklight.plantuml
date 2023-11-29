@@ -1,0 +1,69 @@
+@startuml
+
+title Feedback Light
+
+participant "Main" as main
+participant "App Task" as app
+participant "Matter Stack" as matter
+participant "LED Strip" as led
+
+
+activate main
+    main->app ++ : StartApp()
+    app->app ++ : Init()
+    app->matter ++ : Init Matter\nMemoryInit()\nInitChipStack()\nInitThreadStack()
+    matter-->app --
+    app->app : Init system and factory led
+    app->app : Init buttons
+    app->app : Init LED strip
+    app->matter ++ : More Matter initialization and configuration
+    matter-->app --
+    app --
+
+    loop while true
+        app->app : wait for event
+        app->app : DispatchEvent(event)
+    end loop
+    deactivate app
+
+
+== Command via Matter ==
+
+    matter->>app ++ : MatterPostAttributeChangeCallback
+    app->app ++ : ZCLHandler(LightingEvent)
+    app->app -- : Post Lighting event to event queue
+    app-->matter --
+
+    app->app ++ : DispatchEvent
+    app->app ++ : LightingActionEventHandler
+    app->led ++ : setHue()
+    led->led ++ : apply()
+    led --
+    led-->app --
+    app --
+    app --
+
+== Button Press ==
+
+    ?->app ++ : Button press
+
+    app->app ++ : ButtonEventHandler()
+    app->app -- : Post Button event to event queue
+    app --
+
+    app->app ++ : DispatchEvent
+    app->app ++ : ButtonEventHandler
+    app->app -- : Post Lighting event to event queue
+    app --
+
+    app->app ++ : DispatchEvent
+    app->app ++ : LightingActionEventHandler
+    app->led ++ : enable()
+    led->led ++ : apply()
+    led --
+    led-->app --
+    app --
+    app --
+
+@enduml
+

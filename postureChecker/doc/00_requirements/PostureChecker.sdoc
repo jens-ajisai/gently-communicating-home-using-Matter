@@ -1,0 +1,508 @@
+[DOCUMENT]
+TITLE: Posture Checker
+UID: POSTURE-REQ-SYSTEM-000
+VERSION: 1.0
+OPTIONS:
+  MARKUP: RST
+  AUTO_LEVELS: On
+  REQUIREMENT_STYLE: Table
+  REQUIREMENT_IN_TOC: True
+
+[GRAMMAR]
+ELEMENTS:
+- TAG: REQUIREMENT
+  FIELDS:
+  - TITLE: UID
+    TYPE: String
+    REQUIRED: True
+  - TITLE: STATUS
+    TYPE: SingleChoice(New, Approved, Deleted, Deprecated, Rejected)
+    REQUIRED: True
+  - TITLE: VERIFICATION
+    TYPE: SingleChoice(Requirement, Design, Review, ManualTest, AutomaticTest, None, IsTest)
+    REQUIRED: True
+  - TITLE: TAGS
+    TYPE: Tag
+    REQUIRED: False
+  - TITLE: TITLE
+    TYPE: String
+    REQUIRED: False
+  - TITLE: STATEMENT
+    TYPE: String
+    REQUIRED: True
+  - TITLE: RATIONALE
+    TYPE: String
+    REQUIRED: True
+  - TITLE: COMMENT
+    TYPE: String
+    REQUIRED: False
+  - TITLE: REVIEW
+    TYPE: String
+    REQUIRED: False
+  - TITLE: RELATIONS
+    TYPE: Reference(ParentReqReference, FileReference)
+    REQUIRED: False
+
+[SECTION]
+TITLE: Requirements
+
+[SECTION]
+TITLE: System Requirements
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SYSTEM-001
+STATUS: New
+VERIFICATION: Requirement
+TITLE: Sensing the posture
+STATEMENT: The posture checker shall collect measurements from sensors attached to the back and neck.
+RATIONALE: These measurements will be input for machine learning based regression to determine the quality of the posture.
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SYSTEM-002-1
+STATUS: New
+VERIFICATION: Requirement
+TITLE: ML Model Training
+STATEMENT: The posture checker shall be able to collect data for training the ML model.
+RATIONALE: -
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SYSTEM-002-2
+STATUS: New
+VERIFICATION: Requirement
+TITLE: ML Requession of the posture's quality
+STATEMENT: The posture checker shall do regression with the sensor values to provide the posture quality.
+RATIONALE: -
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SYSTEM-003
+STATUS: New
+VERIFICATION: Requirement
+TITLE: Provision of posture quality
+STATEMENT: The posture checker shall do provide the posture quality over BLE.
+RATIONALE: -
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SYSTEM-004
+STATUS: New
+VERIFICATION: Requirement
+TITLE: Logging
+STATEMENT: The posture checker module shall provide log messages in appropriate levels for debugging and testing purpose.
+RATIONALE: -
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SYSTEM-005
+STATUS: New
+VERIFICATION: Requirement
+TITLE: Shell Interface
+STATEMENT: The posture checker shall provide a shell interface for user triggered functionality, debuggin and testing.
+RATIONALE: -
+COMMENT: User triggered functionality will be erase bonding and start advertising.
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SYSTEM-006
+STATUS: New
+VERIFICATION: Requirement
+TITLE: Memfault Monitoring
+STATEMENT: The posture checker shall integrate Memfault crash analytics.
+RATIONALE: -
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SYSTEM-007
+STATUS: New
+VERIFICATION: Design
+TITLE: Memfault Statistics
+STATEMENT: The posture checker shall integrate Memfault statistics.
+RATIONALE: -
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SYSTEM-008
+STATUS: New
+VERIFICATION: Requirement
+TITLE: Portable Solution
+STATEMENT: The posture checker shall be a portable solution independent of cables for power or data.
+RATIONALE: -
+
+[/SECTION]
+
+[SECTION]
+TITLE: Hardware Requirements
+
+[REQUIREMENT]
+UID: POSTURE-REQ-HARD-001
+STATUS: New
+VERIFICATION: Design
+TITLE: Battery
+STATEMENT: The psoture checker shall run on battery.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-008
+
+[REQUIREMENT]
+UID: POSTURE-REQ-HARD-002
+STATUS: New
+VERIFICATION: Design
+TITLE: BLE with NFC OOB
+STATEMENT: The psoture checker shall provide a BLE interface using NFC for OOB.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-008
+
+[REQUIREMENT]
+UID: POSTURE-REQ-HARD-003
+STATUS: New
+VERIFICATION: Design
+TITLE: QSPI Flash
+STATEMENT: The posture checker shall provide external flash by QSPI.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-008
+
+[REQUIREMENT]
+UID: POSTURE-REQ-HARD-004
+STATUS: New
+VERIFICATION: Design
+TITLE: Flex Sensors
+STATEMENT: The posture checker shall provide 3 flex sensors connected via an I2C based 12-bit ADC module
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-001
+
+[REQUIREMENT]
+UID: POSTURE-REQ-HARD-005
+STATUS: New
+VERIFICATION: Design
+TITLE: IMU
+STATEMENT: The posture checker shall provide 1 IMU connected via I2C.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-001
+
+[REQUIREMENT]
+UID: POSTURE-REQ-HARD-006
+STATUS: New
+VERIFICATION: Design
+TITLE: BNO085 Sensor
+STATEMENT: The posture checker shall provide a BNO085 sensor connected via I2C.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-001
+
+[REQUIREMENT]
+UID: POSTURE-REQ-HARD-007
+STATUS: New
+VERIFICATION: Design
+TITLE: Flat Dimensions
+STATEMENT: The posure checker shall be flat to hide below cloths.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-008
+
+[/SECTION]
+
+[SECTION]
+TITLE: Software Requirements
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-001
+STATUS: New
+VERIFICATION: Design
+TITLE: Flex sensor
+STATEMENT: The sensor module shall collect measurements from 3 flex sensors with 1Hz frequency.
+RATIONALE: These sensors shall be attached to the neck, back and shoulders and measure if the parts are straight or rounded.
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-001
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-002
+STATUS: New
+VERIFICATION: Design
+TITLE: Game Vector Orientation
+STATEMENT: The sensor module shall collect orientation measurements as vector calibrated to earth's magnetic field and north with 1Hz frequency. 
+RATIONALE: These sensor shall be attached to the neck to measure to what extend it is upright or bend forward.
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-001
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-003
+STATUS: New
+VERIFICATION: Design
+TITLE: Accellerometer
+STATEMENT: The sensor module shall collect the accelleration with 1Hz frequency. 
+RATIONALE: These sensor shall be attached to xxx to measure the orientation as the accelleration of gravity. There will be no sensor fusion on this sensor.
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-001
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-004
+STATUS: New
+VERIFICATION: Design
+TITLE: Measurement Persistence
+STATEMENT: The sensor module shall save a measurement set of each sensor together with a timestamp to a file.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-002-1
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-005
+STATUS: New
+VERIFICATION: Design
+TITLE: Littlefs Filesystem
+STATEMENT: The persistence module shall provide a littlefs filesystem on the QSPI flash memory.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SOFT-004
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-006
+STATUS: New
+VERIFICATION: Design
+TITLE: USB MSC
+STATEMENT: The USB module shall provide a mass storage device to access the littlefs filesystem.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SOFT-004
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-008
+STATUS: New
+VERIFICATION: Design
+TITLE: Set Time
+STATEMENT: The BLE module shall provide a writable characteristic to receive a time to set the system's clock to this time. 
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SOFT-004
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-009
+STATUS: New
+VERIFICATION: Design
+TITLE: Sensor Live Feed BLE
+STATEMENT: The BLE module shall provide a notifyable characteristic for the sensor module to provide a live feed of the sensor readings.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-002-1
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-010
+STATUS: New
+VERIFICATION: Design
+TITLE: Sensor Live Feed Serial
+STATEMENT: The USB module shall provide a serial CDC channel for the sensor module to provide a live feed of the sensor readings.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-002-1
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-011
+STATUS: New
+VERIFICATION: Design
+TITLE: Posture quality Feed
+STATEMENT: The BLE module shall provide a notifyable characteristic for the posture quality feed.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-003
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-012
+STATUS: New
+VERIFICATION: Design
+TITLE: BLE Secure Connection
+STATEMENT: The BLE module shall protect the connection by OOB pairing with NFC.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-008
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-013
+STATUS: New
+VERIFICATION: Design
+TITLE: BLE Secure Connection
+STATEMENT: The BLE module shall protect the connection by an allow list for directed advertisments.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-008
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-014
+STATUS: New
+VERIFICATION: Design
+TITLE: Logging
+STATEMENT: The posture checker module shall provide log messages in appropriate levels for debugging and testing purpose.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-004
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-015
+STATUS: New
+VERIFICATION: Design
+TITLE: Edge Impulse Library Integration
+STATEMENT: The ML module shall integrate the Edge Impulse library for regression of the posture quality given the input sensor data.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-002-2
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-016
+STATUS: New
+VERIFICATION: Design
+TITLE: Edge Impulse ML Model
+STATEMENT: The ML module shall integrate a model that has been trained with the Edge Impule dashboard. 
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-002-2
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-017
+STATUS: New
+VERIFICATION: Design
+TITLE: Shell Integration
+STATEMENT: The shell module shall be configure via a separate USB CDC channel.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-005
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-018
+STATUS: New
+VERIFICATION: Design
+TITLE: Application Shell Commands
+STATEMENT: The shell module shall register shell commands for dedicated user interactions.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-005
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-019
+STATUS: New
+VERIFICATION: Design
+TITLE: Memfault Library Integration
+STATEMENT: The diagnosis module shall work with ncs' memfault integration via BLE characterisic mds.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-006
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-020
+STATUS: New
+VERIFICATION: Design
+TITLE: Memfault Binary Upload
+STATEMENT: The flash script shall upload the binary to the memfault server.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-006
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-021
+STATUS: New
+VERIFICATION: Design
+TITLE: Memfault Binary Upload
+STATEMENT: The Raspberry Pi 4 shall run a script continously scanning for the posture checker, connect and receive memfault packets for upload to the server.
+RATIONALE: The Nordic app needs to be connected manually whenever there is a reboot.
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-006
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-022
+STATUS: New
+VERIFICATION: Design
+TITLE: Memfault Statistics
+STATEMENT: The sensor module shall collect statistics on ourliers.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-007
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-023
+STATUS: New
+VERIFICATION: Design
+TITLE: Memfault Statistics
+STATEMENT: The ble module shall collect statistics on established connections.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-007
+
+[REQUIREMENT]
+UID: POSTURE-REQ-SOFT-xx1
+STATUS: New
+VERIFICATION: Design
+TITLE: Delay until USB is attached
+STATEMENT: Delay the startup of the system until a serial console is connected to the USB CDC channel for logging with a timeout of 5 seconds.
+RATIONALE: To prevent loosing logs during startup.
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-SYSTEM-004
+
+[/SECTION]
+
+[/SECTION]
+
+[SECTION]
+TITLE: High Level Design
+
+[REQUIREMENT]
+UID: POSTURE-HLD-HARD-ARCHITECTURE
+STATUS: New
+VERIFICATION: Review
+TITLE: Hardware Schematic
+STATEMENT: -
+RATIONALE: -
+COMMENT: >>>
+.. image:: postureCheckerSchematics.svg
+   :alt: Hardware Schematic Drawing
+<<<
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-HARD-001
+- TYPE: Parent
+  VALUE: POSTURE-REQ-HARD-002
+- TYPE: Parent
+  VALUE: POSTURE-REQ-HARD-003
+- TYPE: Parent
+  VALUE: POSTURE-REQ-HARD-004
+- TYPE: Parent
+  VALUE: POSTURE-REQ-HARD-005
+- TYPE: Parent
+  VALUE: POSTURE-REQ-HARD-006
+
+[REQUIREMENT]
+UID: POSTURE-HLD-HARD-001
+STATUS: New
+VERIFICATION: Review
+TITLE: Flat Dimensions
+STATEMENT: Do not use any pins to keep everything flat. Only use cables soldered directly to the board or flat connectors like JST SH 4 Pins or the NFC connector as on the DK boards.
+RATIONALE: -
+RELATIONS:
+- TYPE: Parent
+  VALUE: POSTURE-REQ-HARD-007
+
+[/SECTION]

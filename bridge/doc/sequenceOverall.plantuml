@@ -1,0 +1,42 @@
+@startuml
+
+title Bridge Handling of BLE Sensors
+
+participant "Matter Controller" as chip
+participant "Feedback Light" as light
+participant "Matter Bridge" as bridge
+participant "Posture Checker" as posture
+
+group One time
+    chip -> light : comission thread
+    light --> chip: commission complete
+
+    chip -> bridge : commission thread
+    bridge --> chip: commission complete
+end
+
+group On each startup
+    bridge -> bridge : initialize bridge
+    bridge -> bridge : add LevelControl cluster
+
+    chip -> bridge : subscribe level control's current level
+
+    bridge -> posture : scan for posture quality service
+    bridge -> posture : connect posture checker
+    bridge -> posture : bond device with out-of-band.
+    bridge -> posture : discover posture quality service
+    bridge -> posture : subscribe posture quality score attribute
+end
+
+group Every second
+    posture -> posture : read sensor values
+    posture -> posture : infer posture quality score
+    posture --> bridge : notify posture quality score
+    bridge -> bridge : set current level
+    bridge -> bridge : update cluster
+
+    bridge --> chip : notify current level
+    chip -> light : send color cluster's move to hue command
+end
+
+@enduml

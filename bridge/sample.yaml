@@ -1,0 +1,6 @@
+sample:
+  description: Matter Bridge
+  name: Matter Bridge application
+tests:
+  gentlyCommunicatingHome.bridge:
+    platform_allow: ssci_mdbt53_dev_board nrf7002dk_nrf5340_cpuapp

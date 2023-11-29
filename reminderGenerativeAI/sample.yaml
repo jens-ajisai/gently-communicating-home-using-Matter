@@ -1,0 +1,9 @@
+sample:
+  description: open.ai
+  name: open.ai
+tests:
+  open_ai.debug:
+    build_only: true
+    integration_platforms:
+      - nrf5340dk_nrf5340_cpuapp
+    platform_allow: nrf5340dk_nrf5340_cpuapp
