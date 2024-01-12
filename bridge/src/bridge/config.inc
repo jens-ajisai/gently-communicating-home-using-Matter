@@ -138,8 +138,8 @@ static constexpr EmberAfDeviceType bridgedPostureDeviceTypes[] = {
 
 DataVersion postureDataVersions[ArraySize(bridgedPostureClusters)];
 
-auto deviceTypes = chip::Span<const EmberAfDeviceType>(bridgedPostureDeviceTypes);
-auto dataVersions = chip::Span<chip::DataVersion>(postureDataVersions);
+auto postureDeviceTypesSpan = chip::Span<const EmberAfDeviceType>(bridgedPostureDeviceTypes);
+auto postureDataVersionsSpan = chip::Span<chip::DataVersion>(postureDataVersions);
 
 #define BT_UUID_PCS_VAL BT_UUID_128_ENCODE(0xe5130001, 0x784f, 0x44f3, 0x9e27, 0xab09a4153139)
 #define BT_UUID_PCS BT_UUID_DECLARE_128(BT_UUID_PCS_VAL)
@@ -161,11 +161,11 @@ BLEConnectivityManager::DeviceFilter deviceFilter{
     .type = BLEConnectivityManager::DeviceFilter::FILTER_TYPE_UUID,
     .filter = {.serviceUuid = BT_UUID_PCS}};
 
-std::map<std::pair<ClusterId, AttributeId>, std::pair<MatterDevice::AttributeTypes, bt_uuid *>>
+std::map<std::pair<ClusterId, AttributeId>, std::pair<MatterDeviceBle::AttributeTypes, bt_uuid *>>
     matterBleMapping{
         {std::make_pair(LevelControl::Id, LevelControl::Attributes::CurrentLevel::Id),
-         std::make_pair(MatterDevice::AttributeTypes::SUBSCRIBE, BT_UUID_PCS_SCORE_MEA)},
+         std::make_pair(MatterDeviceBle::AttributeTypes::SUBSCRIBE, BT_UUID_PCS_SCORE_MEA)},
         {std::make_pair(LevelControl::Id, LevelControl::Attributes::MinLevel::Id),
-         std::make_pair(MatterDevice::AttributeTypes::READ_ONCE, BT_UUID_PCS_SCORE_MIN)},
+         std::make_pair(MatterDeviceBle::AttributeTypes::READ_ONCE, BT_UUID_PCS_SCORE_MIN)},
         {std::make_pair(LevelControl::Id, LevelControl::Attributes::MaxLevel::Id),
-         std::make_pair(MatterDevice::AttributeTypes::READ_ONCE, BT_UUID_PCS_SCORE_MAX)}};
+         std::make_pair(MatterDeviceBle::AttributeTypes::READ_ONCE, BT_UUID_PCS_SCORE_MAX)}};

@@ -1,4 +1,3 @@
-#include <zephyr/audio/dmic.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/usb/usb_device.h>
@@ -80,13 +79,12 @@ int main(void) {
   usb_enable(NULL);
 #endif
 
-  LOG_INF("App Start");
+  LOG_INF("Start of ChatGPT");
 
-  k_work_init(&onRecordingFinishedWork.work, onRecordingFinished);
+  k_work_init_delayable(&onRecordingFinishedWork.work, onRecordingFinished);
 
   fs_init(false);
   button_init();
-  recorder_init();
 
   while (true) {
     LOG_INF("WAIT FOR BUTTON");

@@ -3,7 +3,7 @@
 / {
 	chosen {
 		zephyr,console = &usb_cdc_acm_uart;
-		zephyr,shell-uart = &usb_cdc_acm_uart1;
+		zephyr,shell-uart = &usb_cdc_acm_uart;
 		ncs,ml-app-ei-data-forwarder-uart = &usb_cdc_acm_uart0;
 	};
 

@@ -7,7 +7,6 @@
 #include <zephyr/bluetooth/addr.h>
 
 #include "oob_exchange_manager.h"
-#include "oob_transport_uart.h"
 
 extern "C" {
 #include <zephyr/bluetooth/conn.h>
@@ -235,6 +234,29 @@ CHIP_ERROR BLEConnectivityManager::PrepareFilterForUuid(bt_uuid *serviceUuid) {
   return CHIP_NO_ERROR;
 }
 
+CHIP_ERROR BLEConnectivityManager::PrepareFilterForAddr(bt_addr_le_t *addr) {
+  int err;
+
+  bt_scan_filter_disable();
+  bt_scan_filter_remove_all();
+
+  err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_ADDR, addr);
+
+  if (err) {
+    LOG_ERR("Failed to set scanning filter");
+    return chip::System::MapErrorZephyr(err);
+  }
+
+  err = bt_scan_filter_enable(BT_SCAN_ADDR_FILTER, false);
+  if (err) {
+    LOG_ERR("Filters cannot be turned on");
+    return chip::System::MapErrorZephyr(err);
+  }
+
+  return CHIP_NO_ERROR;
+}
+
+
 CHIP_ERROR BLEConnectivityManager::Init() {
   LOG_INF("BLEConnectivityManager::Init()");
 
@@ -272,6 +294,12 @@ CHIP_ERROR BLEConnectivityManager::Scan(void *ctx, ScanCallback cb, DeviceFilter
       ret = PrepareFilterForUuid(filter.filter.serviceUuid);
       bt_uuid_to_str(filter.filter.serviceUuid, str, sizeof(str));
       LOG_INF("Scan for uuid %s", str);
+      scanState.serviceUuid = filter.filter.serviceUuid;
+      break;
+    case DeviceFilter::FILTER_TYPE_ADDR:
+      ret = PrepareFilterForAddr(&filter.filter.deviceAddress);
+      bt_addr_le_to_str(&filter.filter.deviceAddress, str, sizeof(str));
+      LOG_INF("Scan for addr %s", str);
       scanState.serviceUuid = filter.filter.serviceUuid;
       break;
     default:
@@ -322,12 +350,17 @@ int BLEConnectivityManager::ConnectFirstBondedDevice(void *ctx, ScanCallback cb,
   LOG_INF("BLEConnectivityManager::ConnectFirstBondedDevice");
   bt_addr_le_t addr = bt_addr_le_none;
 
-  bt_foreach_bond(
-      BT_ID_DEFAULT,
-      [](const struct bt_bond_info *info, void *user_data) {
-        memcpy(user_data, &info->addr, sizeof(bt_addr_le_t));
-      },
-      &addr);
+  if (bt_addr_le_eq(&addr, &bt_addr_le_none)) {
+    LOG_INF("Iterate bonded devices.");
+    bt_foreach_bond(
+        BT_ID_DEFAULT,
+        [](const struct bt_bond_info *info, void *user_data) {
+          memcpy(user_data, &info->addr, sizeof(bt_addr_le_t));
+        },
+        &addr);
+  } else {
+    LOG_INF("Use address of OOB data.");
+  }
 
   if (!bt_addr_le_eq(&addr, &bt_addr_le_none)) {
     for (size_t i = 0; i < ARRAY_SIZE(myConnections); i++) {
@@ -376,8 +409,4 @@ int BLEConnectivityManager::Connect(const bt_addr_le_t *addr, const bt_le_conn_p
   }
 
   return err;
-}
-
-void BLEConnectivityManager::ExchangeOob() {
-  OobExchangeManager::Instance().ExchangeOob(&OobTransportUart::Instance());
 }

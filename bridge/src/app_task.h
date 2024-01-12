@@ -40,6 +40,7 @@ private:
 	static void UpdateLedStateEventHandler(const AppEvent &event);
 	static void FunctionHandler(const AppEvent &event);
 	static void FunctionTimerEventHandler(const AppEvent &event);
+	static void ParseUartMessageHandler(const AppEvent &event);
 
 	static void ChipEventHandler(const chip::DeviceLayer::ChipDeviceEvent *event, intptr_t arg);
 	static void ButtonEventHandler(uint32_t buttonState, uint32_t hasChanged);
@@ -48,6 +49,8 @@ private:
 
 	static void UpdateStatusLED();
 	static void LEDStateUpdateHandler(LEDWidget &ledWidget);
+
+	static void UartMessageHandler(char *buf, uint16_t len);
 
 	FunctionEvent mFunction = FunctionEvent::NoneSelected;
 	bool mFunctionTimerActive = false;

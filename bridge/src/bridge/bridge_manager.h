@@ -6,10 +6,15 @@
 #include <map>
 
 #include "matter_device.h"
+#include "matter_device_ble.h"
+#include "matter_device_fixed.h"
 
 class BridgeManager {
  public:
-  CHIP_ERROR Init(struct MatterDevice::MatterDeviceConfiguration conf);
+  // https://github.com/nrfconnect/sdk-nrf/commit/390c3f93d63444f39477ecc6a5dfd43caa773152
+  static constexpr chip::EndpointId aggregatorEndpointId = CONFIG_BRIDGE_AGGREGATOR_ENDPOINT_ID;
+
+  CHIP_ERROR Init(struct MatterDeviceBle::MatterDeviceConfiguration conf, struct MatterDeviceFixed::MatterDeviceConfiguration conf2);
 
   static BridgeManager &Instance() {
     static BridgeManager sInstance;

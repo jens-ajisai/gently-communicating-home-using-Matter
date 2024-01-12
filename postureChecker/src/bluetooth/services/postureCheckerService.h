@@ -9,6 +9,11 @@ extern "C" {
 
 #include "../../sensors/sensorDataDefinition.h"
 
+
+
+#define BT_UUID_EIS_TX_VAL BT_UUID_128_ENCODE(0xe2a00003, 0xec31, 0x4ec3, 0xa97a, 0x1c34d87e9878)
+#define BT_UUID_EIS_RX_VAL BT_UUID_128_ENCODE(0xe2a00002, 0xec31, 0x4ec3, 0xa97a, 0x1c34d87e9878)
+
 #define BT_UUID_PCS_VAL BT_UUID_128_ENCODE(0xe5130001, 0x784f, 0x44f3, 0x9e27, 0xab09a4153139)
 #define BT_UUID_EIS_VAL BT_UUID_128_ENCODE(0xe2a00001, 0xec31, 0x4ec3, 0xa97a, 0x1c34d87e9878)
 #define BT_UUID_PCS_DATA_VAL BT_UUID_128_ENCODE(0xe5130002, 0x784f, 0x44f3, 0x9e27, 0xab09a4153139)

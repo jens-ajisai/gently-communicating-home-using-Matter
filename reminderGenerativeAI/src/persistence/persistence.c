@@ -32,26 +32,26 @@ int fs_lsdir(const char *path) {
 
   res = fs_opendir(&dirp, path);
   if (res) {
-    LOG_ERR("Error opening dir %s [%d]\n", path, res);
+    LOG_ERR("Error opening dir %s [%d]", path, res);
     return res;
   }
 
-  LOG_INF("\nListing dir %s ...\n", path);
+  LOG_INF("Listing dir %s ...", path);
   for (;;) {
     res = fs_readdir(&dirp, &entry);
 
     /* entry.name[0] == 0 means end-of-dir */
     if (res || entry.name[0] == 0) {
       if (res < 0) {
-        LOG_ERR("Error reading dir [%d]\n", res);
+        LOG_ERR("Error reading dir [%d]", res);
       }
       break;
     }
 
     if (entry.type == FS_DIR_ENTRY_DIR) {
-      LOG_INF("[DIR ] %s\n", entry.name);
+      LOG_INF("[DIR ] %s", entry.name);
     } else {
-      LOG_INF("[FILE] %s (size = %zu)\n", entry.name, entry.size);
+      LOG_INF("[FILE] %s (size = %zu)", entry.name, entry.size);
     }
   }
 
@@ -73,19 +73,19 @@ int fs_readFile(const char *path, void *buf, uint16_t len, fs_read_cb_t cb, void
   err = fs_stat(fname, &dirent);
   if (err != 0) {
     LOG_ERR("File status of file %s failed: %d", fname, err);
-    return err;
+    return -ENOENT;
   }
 
   if (dirent.type != FS_DIR_ENTRY_FILE) {
     LOG_ERR("Provided path is not a file");
-    return 0;
+    return -EISDIR;
   }
 
   fs_file_t_init(&file);
   err = fs_open(&file, fname, FS_O_READ);
   if (err) {
     LOG_ERR("Failed to open %s (%d)", path, err);
-    return -ENOEXEC;
+    return err;
   }
 
   if (dirent.size <= len) {
@@ -244,7 +244,7 @@ static int increaseBootCounter() {
     LOG_ERR("FAIL: read %s: [rd:%d]", fname, rc);
     goto out;
   }
-  LOG_INF("%s read count:%u (bytes: %d)\n", fname, boot_count, rc);
+  LOG_INF("%s read count:%u (bytes: %d)", fname, boot_count, rc);
 
   rc = fs_seek(&file, 0, FS_SEEK_SET);
   if (rc < 0) {
@@ -259,7 +259,7 @@ static int increaseBootCounter() {
     goto out;
   }
 
-  LOG_INF("%s write new boot count %u: [wr:%d]\n", fname, boot_count, rc);
+  LOG_INF("%s write new boot count %u: [wr:%d]", fname, boot_count, rc);
 
 out:
   ret = fs_close(&file);
@@ -277,17 +277,18 @@ static int flash_info_and_erase(unsigned int id, bool eraseFlash) {
 
   rc = flash_area_open(id, &pfa);
   if (rc < 0) {
-    LOG_ERR("FAIL: unable to find flash area %u: %d\n", id, rc);
+    LOG_ERR("FAIL: unable to find flash area %u: %d", id, rc);
     return rc;
   }
 
-  LOG_INF("Area %u at 0x%x on %s for %u bytes\n", id, (unsigned int)pfa->fa_off, pfa->fa_dev->name,
+  LOG_INF("Area %u at 0x%x on %s for %u bytes", id, (unsigned int)pfa->fa_off, pfa->fa_dev->name,
           (unsigned int)pfa->fa_size);
 
   /* Optional wipe flash contents */
   if (eraseFlash) {
-    rc = flash_area_erase(pfa, 0, pfa->fa_size);
     LOG_INF("Erasing flash area ... %d", rc);
+    rc = flash_area_erase(pfa, 0, pfa->fa_size);
+    LOG_INF("... Done %d", rc);
   }
 
   flash_area_close(pfa);
@@ -300,8 +301,9 @@ int fs_init(bool eraseFlash) {
 
   if (mInitialized) return -1;
 
-  rc = flash_info_and_erase((uintptr_t)mp.storage_dev, eraseFlash);
+  rc = flash_info_and_erase((uintptr_t) FIXED_PARTITION_ID(ffs1), eraseFlash);
   if (rc < 0) {
+    LOG_ERR("Failed to get flash info.");
     return rc;
   }
 
@@ -312,22 +314,22 @@ int fs_init(bool eraseFlash) {
   }
 
   k_sleep(K_MSEC(50));
-  LOG_INF("%s mounted\n", mp.mnt_point);
+  LOG_INF("%s mounted", mp.mnt_point);
 
   rc = fs_statvfs(mp.mnt_point, &sbuf);
   if (rc < 0) {
-    LOG_ERR("FAIL: statvfs: %d\n", rc);
+    LOG_ERR("FAIL: statvfs: %d", rc);
     goto out;
   }
 
   LOG_INF(
       "%s: bsize = %lu ; frsize = %lu ;"
-      " blocks = %lu ; bfree = %lu\n",
+      " blocks = %lu ; bfree = %lu",
       mp.mnt_point, sbuf.f_bsize, sbuf.f_frsize, sbuf.f_blocks, sbuf.f_bfree);
 
   rc = fs_lsdir(mp.mnt_point);
   if (rc < 0) {
-    LOG_ERR("FAIL: lsdir %s: %d\n", mp.mnt_point, rc);
+    LOG_ERR("FAIL: lsdir %s: %d", mp.mnt_point, rc);
     goto out;
   }
 
@@ -337,7 +339,7 @@ int fs_init(bool eraseFlash) {
 
 out:
   rc = fs_unmount(&mp);
-  LOG_ERR("%s unmount: %d\n", mp.mnt_point, rc);
+  LOG_ERR("%s unmount: %d", mp.mnt_point, rc);
   return -1;
 }
 
@@ -345,6 +347,6 @@ int fs_deinit(void) {
   if (!mInitialized) return -1;
 
   int rc = fs_unmount(&mp);
-  LOG_INF("%s unmount: %d\n", mp.mnt_point, rc);
+  LOG_INF("%s unmount: %d", mp.mnt_point, rc);
   return 0;
 }

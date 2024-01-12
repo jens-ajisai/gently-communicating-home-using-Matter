@@ -5,9 +5,12 @@
 
 	msc_disk0 {
 		compatible = "zephyr,flash-disk";
-		partition = <&ffs1_part>;
+		partition = <&ffs1>;
+		// disk-name must be one of "RAM","NAND","CF","SD","SD2","USB","USB2","USB3"
 		disk-name = "NAND";
 		cache-size = <4096>;
+		// when changing sector-size, adapt CONFIG_FS_FATFS_MAX_SS or crash
+		sector-size = <512>;
 	};
 };
 
@@ -33,8 +36,9 @@ dmic_dev: &pdm0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
 
-		ffs1_part: partition@0 {
-			reg = <0x00000000 0x00800000>;
+		ffs1: partition@0 {
+			label = "ffs1";			
+			reg = <0x00000000 0x00100000>;
 		};
 	};
 };

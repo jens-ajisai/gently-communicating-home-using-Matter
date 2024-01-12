@@ -4,10 +4,15 @@
 
 / {
 	chosen {
-		zephyr,console = &uart0;
+		zephyr,display = &st7789v;		
+		zephyr,console = &uart0;		
 		zephyr,shell-uart = &uart0;		
+		zephyr,flash-controller = &mx25r64;		
 		nordic,pm-ext-flash = &mx25r64;
 	};
+	aliases {
+		nfc-uart = &uart1;
+	};	
 };
 
 /* Set IPC thread priority to the highest value to not collide with other threads. */
@@ -21,4 +26,102 @@
 	pinctrl-0 = <&uart1_default>;
 	pinctrl-1 = <&uart1_sleep>;
 	pinctrl-names = "default", "sleep";
+};
+
+
+// Below for open.ai use-case
+
+// Define the filesystem for the USB MASS Storage
+/ {
+	msc_disk0 {
+		compatible = "zephyr,flash-disk";
+		partition = <&ffs1>;
+		// disk-name must be one of "RAM","NAND","CF","SD","SD2","USB","USB2","USB3"
+		disk-name = "NAND";
+		cache-size = <4096>;
+		// when changing sector-size, adapt CONFIG_FS_FATFS_MAX_SS or crash
+		sector-size = <512>;
+	};
+};
+
+// Define the pins for the microphone for the voice recorder
+&pinctrl {
+	pdm0_default_alt: pdm0_default_alt {
+		group1 {
+			// change also values in bridge/src/reminders/recorder.c when changing these
+			psels = <NRF_PSEL(PDM_CLK, 1, 11)>,
+				<NRF_PSEL(PDM_DIN, 1, 12)>;
+		};
+	};
+};
+
+dmic_dev: &pdm0 {
+	status = "okay";
+	pinctrl-0 = <&pdm0_default_alt>;
+	pinctrl-names = "default";
+	clock-source = "PCLK32M_HFXO";
+};
+
+// Definition of the file system partition on the flash
+// When the Partition Manager is active, add a static partition or this will be dropped!
+&mx25r64 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		ffs1: partition@0 {
+			label = "ffs1";			
+			reg = <0x00000000 0x00100000>;
+		};
+	};
+};
+
+// Definition of the SPI pins for the display
+&spi3_default {
+	group1 {
+		psels = <NRF_PSEL(SPIM_SCK, 1, 15)>,
+			<NRF_PSEL(SPIM_MISO, 1, 14)>,
+			<NRF_PSEL(SPIM_MOSI, 1, 13)>;
+	};
+};
+
+// Definition of the display
+display_spi: &spi3 {
+	status = "okay";
+	cs-gpios = <&gpio0 27 GPIO_ACTIVE_LOW>;
+
+	st7789v: st7789v@0 {
+		compatible = "sitronix,st7789v";
+		spi-max-frequency = <20000000>;
+		reg = <0>;
+		cmd-data-gpios = <&gpio1 2 GPIO_ACTIVE_LOW>;
+// Use soft reset to save a pin
+//		reset-gpios = <&gpio1 2 GPIO_ACTIVE_LOW>;
+		width = <240>;
+		height = <240>;
+		x-offset = <0>;
+		y-offset = <0>;
+		vcom = <0x19>;
+		gctrl = <0x35>;
+		vrhs = <0x12>;
+		vdvs = <0x20>;
+		mdac = <0x00>;
+		gamma = <0x01>;
+		colmod = <0x05>;
+		lcm = <0x2c>;
+		porch-param = [0c 0c 00 33 33];
+		cmd2en-param = [5a 69 02 01];
+		pwctrl1-param = [a4 a1];
+		pvgam-param = [D0 04 0D 11 13 2B 3F 54 4C 18 0D 0B 1F 23];
+		nvgam-param = [D0 04 0C 11 13 2C 3F 44 51 2F 1F 1F 20 23];
+		ram-param = [00 F0];
+		rgb-param = [CD 08 14];
+	};
+
+};
+
+// Disable i2c1 to free up pins used for the display
+&i2c1 {
+	status = "disabled";
 };

@@ -1,6 +1,7 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/usb/usb_device.h>
 
 LOG_MODULE_REGISTER(usb, CONFIG_CHIP_APP_LOG_LEVEL);
 
@@ -10,11 +11,15 @@ LOG_MODULE_REGISTER(usb, CONFIG_CHIP_APP_LOG_LEVEL);
 static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 
 #include <zephyr/drivers/uart.h>
-#include <zephyr/usb/usb_device.h>
 
 /* Delay for console initialization */
+#if defined(CONFIG_USB_DEVICE_INITIALIZE_AT_BOOT)
+#define WAIT_FOR_CONSOLE_MSEC 0
+#define WAIT_FOR_CONSOLE_DEADLINE_MSEC 0
+#else
 #define WAIT_FOR_CONSOLE_MSEC 100
 #define WAIT_FOR_CONSOLE_DEADLINE_MSEC 5000
+#endif
 
 void initGpio() {
   int ret;
@@ -55,5 +60,10 @@ int initUSB() {
   return 0;
 }
 #else
-int initUSB() { return 0; }
+int initUSB() {
+#if defined(CONFIG_USB_DEVICE_STACK)
+  usb_enable(NULL);
+#endif
+  return 0;
+}
 #endif

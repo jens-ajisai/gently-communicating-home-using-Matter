@@ -259,6 +259,7 @@ int Persistence::init(bool eraseFlash) {
 
   if (mInitialized) return -1;
 
+  // Memo: (uintptr_t)mp->storage_dev only works for littlefs, not for fatfs!
   rc = flash_info_and_erase((uintptr_t)mp->storage_dev, eraseFlash);
   if (rc < 0) {
     return rc;

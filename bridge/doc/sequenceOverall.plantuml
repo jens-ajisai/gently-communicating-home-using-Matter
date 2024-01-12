@@ -11,7 +11,7 @@ group One time
     chip -> light : comission thread
     light --> chip: commission complete
 
-    chip -> bridge : commission thread
+    chip -> bridge : commission thread or wifi
     bridge --> chip: commission complete
 end
 

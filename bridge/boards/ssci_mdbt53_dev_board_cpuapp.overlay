@@ -15,6 +15,10 @@
 		zephyr,flash-controller = &w25q128jv;
 	};
 
+	aliases {
+		nfc-uart = &uart1;
+	};	
+
 	fstab {
 		compatible = "zephyr,fstab";
 		lfs1: lfs1 {
@@ -78,7 +82,7 @@
 };
 
 &pinctrl {
-	uart2_default: uart2_default {
+	uart1_default: uart1_default {
 		group1 {
 			psels = <NRF_PSEL(UART_TX, 0, 10)>,
 					<NRF_PSEL(UART_RX, 0, 11)>,
@@ -87,7 +91,7 @@
 		};
 	};
 
-	uart2_sleep: uart2_sleep {
+	uart1_sleep: uart1_sleep {
 		group1 {
 			psels = <NRF_PSEL(UART_TX, 0, 10)>,
 					<NRF_PSEL(UART_RX, 0, 11)>,
@@ -98,11 +102,12 @@
 	};
 };
 
-&uart2 {
+// TODO test that uart1 works correctly!!
+&uart1 {
 	current-speed = <115200>;
 	status = "okay";
-	pinctrl-0 = <&uart2_default>;
-	pinctrl-1 = <&uart2_sleep>;
+	pinctrl-0 = <&uart1_default>;
+	pinctrl-1 = <&uart1_sleep>;
 	pinctrl-names = "default", "sleep";
 	// lpuart: nrf-sw-lpuart {
 	// 	compatible = "nordic,nrf-sw-lpuart";

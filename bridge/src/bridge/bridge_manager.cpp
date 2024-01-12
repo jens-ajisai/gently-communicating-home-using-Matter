@@ -1,5 +1,6 @@
 #include "bridge_manager.h"
 
+#include <app-common/zap-generated/ids/Clusters.h>
 #include <app/reporting/reporting.h>
 #include <app/util/af-types.h>
 #include <app/util/attribute-storage.h>
@@ -11,11 +12,12 @@
 
 #include "ble_connectivity_manager.h"
 #include "matter_device.h"
+#include "matter_device_ble.h"
 LOG_MODULE_DECLARE(app, CONFIG_CHIP_APP_LOG_LEVEL);
 
 using namespace ::chip::app::Clusters;
 
-CHIP_ERROR BridgeManager::Init(struct MatterDevice::MatterDeviceConfiguration conf) {
+CHIP_ERROR BridgeManager::Init(struct MatterDeviceBle::MatterDeviceConfiguration conf, struct MatterDeviceFixed::MatterDeviceConfiguration conf2) {
   LOG_INF("BridgeManager::Init");
   CHIP_ERROR err;
   // Set starting endpoint id where dynamic endpoints will be assigned, which
@@ -35,8 +37,14 @@ CHIP_ERROR BridgeManager::Init(struct MatterDevice::MatterDeviceConfiguration co
     return err;
   }
 
-  MatterDevice *dev = chip::Platform::New<MatterDevice>(conf);
+  MatterDeviceBle *dev = chip::Platform::New<MatterDeviceBle>(conf);
   err = AddDeviceEndpoint(dev);
+  if (err != CHIP_NO_ERROR) {
+    return err;
+  }
+
+  MatterDeviceFixed *dev2 = chip::Platform::New<MatterDeviceFixed>(conf2);
+  err = AddDeviceEndpoint(dev2);
   return err;
 }
 
@@ -68,11 +76,11 @@ CHIP_ERROR BridgeManager::AddDeviceEndpoint(MatterDevice *dev) {
         
         // Register dyanmic matter device
         ret = emberAfSetDynamicEndpoint(index, BridgeManager::Instance().mCurrentEndpointId,
-                                        dev->mConf.ep, *(dev->mConf.dataVersions),
-                                        *(dev->mConf.deviceTypes));
+                                        dev->GetEndpoint(), *(dev->GetDataVersions()),
+                                        *(dev->GetDeviceTypes()), aggregatorEndpointId);
 
         if (ret == EMBER_ZCL_STATUS_SUCCESS) {
-          LOG_INF("Added device %s to dynamic endpoint %d (index=%d)", dev->mConf.name,
+          LOG_INF("Added device %s to dynamic endpoint %d (index=%d)", dev->GetName(),
                   BridgeManager::Instance().mCurrentEndpointId, index);
           dev->Init();
           BridgeManager::Instance().mDevicesMap[index] = dev;

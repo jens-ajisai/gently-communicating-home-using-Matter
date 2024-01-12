@@ -16,7 +16,7 @@
 #include "bluetooth/services/postureCheckerService.h"
 #include "bluetooth/services/timeService.h"
 #include "sensors/sensorDataDefinition.h"
-
+#include "nfc/nfc.h"
 LOG_MODULE_REGISTER(bt, CONFIG_MAIN_LOG_LEVEL);
 
 static struct bt_conn *conns[CONFIG_BT_MAX_CONN];
@@ -129,11 +129,11 @@ static void auth_pairing_oob_data_request(struct bt_conn *conn, struct bt_conn_o
 }
 
 #define BT_LE_ADV_CONN_NO_ACCEPT_LIST                                                            \
-  BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_ONE_TIME, BT_GAP_ADV_FAST_INT_MIN_2, \
+  BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_USE_IDENTITY | BT_LE_ADV_OPT_ONE_TIME, BT_GAP_ADV_FAST_INT_MIN_2, \
                   BT_GAP_ADV_FAST_INT_MAX_2, NULL)
 
 #define BT_LE_ADV_CONN_ACCEPT_LIST                                                                \
-  BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_FILTER_CONN | BT_LE_ADV_OPT_ONE_TIME, \
+  BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_USE_IDENTITY | BT_LE_ADV_OPT_FILTER_CONN | BT_LE_ADV_OPT_ONE_TIME, \
                   BT_GAP_ADV_FAST_INT_MIN_2, BT_GAP_ADV_FAST_INT_MAX_2, NULL)
 
 
@@ -141,7 +141,6 @@ static void auth_pairing_oob_data_request(struct bt_conn *conn, struct bt_conn_o
 // advertisment data
 static const struct bt_data ad[] = {
     BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
-//    BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_PCS_VAL),
     BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_MDS_VAL),
     BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
 };
@@ -217,11 +216,15 @@ void advertise_with_acceptlist(struct k_work *work) {
       return;
     }
     LOG_INF("Advertising successfully started");
+
+    local_oob_get(0, 0);
+    nfc_init();    
   }
 }
 
 K_WORK_DEFINE(advertise_acceptlist_work, advertise_with_acceptlist);
 
+/*
 static void update_phy(struct bt_conn *conn) {
   int err;
   const struct bt_conn_le_phy_param preferred_phy = {
@@ -234,6 +237,7 @@ static void update_phy(struct bt_conn *conn) {
     LOG_ERR("bt_conn_le_phy_update() returned %d", err);
   }
 }
+*/
 
 static void update_data_length(struct bt_conn *conn) {
   int err;
@@ -296,7 +300,7 @@ static void on_connected(struct bt_conn *conn, uint8_t err) {
           connection_interval, info.le.latency, supervision_timeout);
 
   // Fails to LE Set PHY (-5)
-  update_phy(conn);
+//  update_phy(conn);
   update_data_length(conn);
   update_mtu(conn);
 
@@ -465,6 +469,12 @@ static enum bt_security_err pairing_accept(struct bt_conn *conn,
       feat->io_capability, feat->oob_data_flag, feat->auth_req, feat->max_enc_key_size,
       feat->init_key_dist, feat->resp_key_dist);
 
+#if defined(CONFIG_APP_REQUIRE_OOB)
+    if(feat->oob_data_flag == 0) {
+      return BT_SECURITY_ERR_OOB_NOT_AVAILABLE;
+    }
+#endif
+
   return BT_SECURITY_ERR_SUCCESS;
 }
 #endif /* CONFIG_BT_SMP_APP_PAIRING_ACCEPT */
@@ -609,8 +619,6 @@ void bt_init(struct bt_app_cb *cb) {
       return;
     }
   }
-
-  local_oob_get(0, 0);
 
   k_work_submit(&advertise_acceptlist_work);
 }

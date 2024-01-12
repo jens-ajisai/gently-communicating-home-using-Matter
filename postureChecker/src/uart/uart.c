@@ -75,7 +75,7 @@ void module_thread_fn() {
 
   LOG_INF("Start listening for remote oob data.");
 
-  char tx_buf[OOB_MESSAGE_LEN];
+  char tx_buf[OOB_MESSAGE_LEN] = {0};
   while (k_msgq_get(&transportMsgq, &tx_buf, K_FOREVER) == 0) {
     LOG_INF("Received remote oob data: %s", tx_buf);
 

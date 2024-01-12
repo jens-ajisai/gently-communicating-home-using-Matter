@@ -2,6 +2,14 @@
 
 #include <bluetooth/gatt_dm.h>
 #include <lib/support/CHIPMem.h>
+// Including only the PlatformManager.h results in a compile error
+//   /opt/nordic/ncs/v2.5.1/modules/lib/matter/src/platform/Zephyr/CHIPDevicePlatformEvent.h:74:21:
+//   error: 'PacketBuffer' in namespace 'chip::System' does not name a type
+//     74 |     ::chip::System::PacketBuffer * Data;
+// Therefore it is necessary to include (or indirectly via other includes)
+// system/SystemPacketBuffer.h
+// first. Be aware of VS Code's "Format Document" function
+#include <system/SystemPacketBuffer.h>
 #include <platform/PlatformManager.h>
 #include <zephyr/bluetooth/addr.h>
 #include <zephyr/bluetooth/conn.h>
@@ -94,15 +102,15 @@ void BleDevice::DiscoveryCompletedHandler(bt_gatt_dm *dm, void *context) {
   while (NULL != (attr = bt_gatt_dm_attr_next(dm, attr))) {
     if (attr->uuid->type == BT_UUID_TYPE_16) {
       auto *uuid = chip::Platform::New<bt_uuid_16>();
-      uuid = BT_UUID_16(attr->uuid);
+      *uuid = *(BT_UUID_16(attr->uuid));
       mHandleToUuid[attr->handle] = reinterpret_cast<bt_uuid *>(uuid);
     } else if (attr->uuid->type == BT_UUID_TYPE_32) {
       auto *uuid = chip::Platform::New<bt_uuid_32>();
-      uuid = BT_UUID_32(attr->uuid);
+      *uuid = *(BT_UUID_32(attr->uuid));
       mHandleToUuid[attr->handle] = reinterpret_cast<bt_uuid *>(uuid);
     } else if (attr->uuid->type == BT_UUID_TYPE_128) {
       auto *uuid = chip::Platform::New<bt_uuid_128>();
-      uuid = BT_UUID_128(attr->uuid);
+      *uuid = *(BT_UUID_128(attr->uuid));
       mHandleToUuid[attr->handle] = reinterpret_cast<bt_uuid *>(uuid);
     }
   }
@@ -122,13 +130,15 @@ void BleDevice::DiscoveryCompletedHandler(bt_gatt_dm *dm, void *context) {
 void BleDevice::DiscoveryNotFound(bt_conn *conn, void *context) {
   mDisCb.dev = NULL;
   mDisCb.cb = NULL;
-  LOG_ERR("GATT service could not be found during the discovery");
+  LOG_ERR("GATT service could not be found during the discovery Disconnect.");
+  Disconnect();  
 }
 
 void BleDevice::DiscoveryError(bt_conn *conn, int err, void *context) {
   mDisCb.dev = NULL;
   mDisCb.cb = NULL;
-  LOG_ERR("The GATT discovery procedure failed with %d", err);
+  LOG_ERR("The GATT discovery procedure failed with %d. Disconnect.", err);
+  Disconnect();  
 }
 
 void BleDevice::Discover(void *ctx, DiscoveryCallback cb, struct bt_uuid *serviceUuid) {
@@ -155,10 +165,10 @@ void BleDevice::Discover(void *ctx, DiscoveryCallback cb, struct bt_uuid *servic
 void BleDevice::SubscriptionHandler(bt_conn *conn, bt_gatt_subscribe_params *params,
                                     const void *data, uint16_t length) {
   // subscriptions of bonded devices survive a disconnect
-  if(mHandleToUuid[params->value_handle] != nullptr) {
+  if (mHandleToUuid[params->value_handle] != nullptr) {
     char str[BT_UUID_STR_LEN];
     bt_uuid_to_str(mHandleToUuid[params->value_handle], str, sizeof(str));
-    LOG_INF("Subscription handler for uuid %s: ", str);
+    LOG_INF("Subscription handler for uuid %s (handle %d): ", str, params->value_handle);
     LOG_HEXDUMP_INF(data, length, "Subscription data");
 
     auto subCb = mSubCbs[params];
@@ -178,6 +188,7 @@ bool BleDevice::CheckSubscriptionParameters(bt_gatt_subscribe_params *params) {
   return true;
 }
 
+// https://lists.zephyrproject.org/g/devel/topic/ble_services_not_cleared/25177224
 void BleDevice::Subscribe(void *ctx, SubscriptionCallback cb, bt_uuid *charUuid) {
   char str[BT_UUID_STR_LEN];
   bt_uuid_to_str(charUuid, str, sizeof(str));
@@ -196,13 +207,15 @@ void BleDevice::Subscribe(void *ctx, SubscriptionCallback cb, bt_uuid *charUuid)
   if (CheckSubscriptionParameters(params)) {
     int err = bt_gatt_subscribe(mConn, params);
     if (err) {
-      LOG_ERR("Subscribe to posture characteristic failed with error %d", err);
+      LOG_ERR("Subscribe to posture characteristic failed with error %d. Disconnect.", err);
+      Disconnect();      
     } else {
       LOG_INF("Subscribe OK");
     }
   } else {
-    LOG_ERR("Subscription parameter verification failed. value_handle=%d,  ccc_handle=%d",
+    LOG_ERR("Subscription parameter verification failed. value_handle=%d,  ccc_handle=%d. Disconnect.",
             params->value_handle, params->ccc_handle);
+    Disconnect();      
   }
 }
 
@@ -242,7 +255,7 @@ void BleDevice::GATTReadCallback(bt_conn *conn, uint8_t att_err, bt_gatt_read_pa
 bool BleDevice::Read(struct bt_uuid *uuid, uint8_t *buffer, uint16_t maxReadLength) {
   char str[BT_UUID_STR_LEN];
   bt_uuid_to_str(uuid, str, sizeof(str));
-  LOG_INF("Read uuid %s to buffer %p with max length %d", str, buffer, maxReadLength);
+  LOG_INF("Read uuid %s to buffer %p with max length %d", str, (void *)buffer, maxReadLength);
 
   bt_gatt_read_params params;
   params.func = GATTReadCallbackEntry;
@@ -268,4 +281,8 @@ bool BleDevice::Read(struct bt_uuid *uuid, uint8_t *buffer, uint16_t maxReadLeng
   mGattReadSize = 0;
   LOG_INF("Read success %s", gattReadSuccess ? "true" : "false");
   return gattReadSuccess;
+}
+
+void BleDevice::Disconnect() {
+  bt_conn_disconnect(mConn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
 }

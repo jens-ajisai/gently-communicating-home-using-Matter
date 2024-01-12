@@ -114,6 +114,8 @@ int ei_data_forwarder_handle_sensor_event(const struct posture_data data) {
                data.time, data.flex1, data.flex2, data.flex3, data.roll, data.pitch, data.yaw,
                data.accel_x, data.accel_y, data.accel_z, data.magn_x, data.magn_y, data.magn_z);
   // https://studio.edgeimpulse.com/studio/276797/acquisition/training
+  LOG_DBG("%s",buf);
+  
 
   if (!(writtenBytes >= 0 && writtenBytes < DATA_BUF_SIZE)) {
     LOG_ERR("EI data forwader buffer too small.");

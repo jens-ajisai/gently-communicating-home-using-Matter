@@ -28,11 +28,24 @@ config BRIDGE_BT_RECOVERY_INTERVAL_MS
 config BRIDGE_BT_RECOVERY_SCAN_TIMEOUT_MS
 	int "Time (in ms) within which the Bridge will try to re-establish a connection to the lost BT LE device"
 	default 2000
+	
+config BRIDGE_AGGREGATOR_ENDPOINT_ID
+ 	int "Id of an endpoint implementing Aggregator device type functionality"
+ 	default 1
+
+config OPENAI_API_KEY
+	string "API Key for Open.ai"
+	help
+	  Specify the Password to connect
 
 
+partition=FFS1
+partition-size=0x100000
+source "${ZEPHYR_BASE}/../nrf/subsys/partition_manager/Kconfig.template.partition_config"
+source "${ZEPHYR_BASE}/../nrf/subsys/partition_manager/Kconfig.template.partition_region"
 
-source "${ZEPHYR_BASE}/../modules/lib/matter/config/nrfconnect/chip-module/Kconfig.features"
-source "${ZEPHYR_BASE}/../modules/lib/matter/config/nrfconnect/chip-module/Kconfig.defaults"
+source "${ZEPHYR_CONNECTEDHOMEIP_MODULE_DIR}/config/nrfconnect/chip-module/Kconfig.features"
+source "${ZEPHYR_CONNECTEDHOMEIP_MODULE_DIR}/config/nrfconnect/chip-module/Kconfig.defaults"
 source "Kconfig.zephyr"
 
 # Required to be able to do 

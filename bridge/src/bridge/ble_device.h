@@ -37,12 +37,6 @@ class BleDevice {
     bt_conn_unref(mConn);
     printk("bt_conn_unref OK");
 
-
-    // zephyr/lib/os/heap.c:175
-    //   __ASSERT(chunk_used(h, c), "unexpected heap state (double-free?) for memory at %p", mem);
-    //
-    // Comment out for now. Only small memory leak ...
-/*
     for (const auto &[key, value] : mHandleToUuid) {
       if (value) {
         printk("Delete value");
@@ -56,7 +50,6 @@ class BleDevice {
         chip::Platform::Delete(key);
       }
     }
-*/    
   }
 
   static std::map<bt_conn *, BleDevice *> instances;
@@ -74,6 +67,8 @@ class BleDevice {
                            uint16_t length);
   void GATTReadCallback(bt_conn *conn, uint8_t att_err, bt_gatt_read_params *params,
                         const void *data, uint16_t read_len);
+
+  void Disconnect();
 
  private:
   void addInstance(bt_conn *conn, BleDevice *dev) { instances[conn] = dev; }

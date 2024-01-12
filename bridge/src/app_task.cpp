@@ -6,10 +6,6 @@
 
 #include "app_task.h"
 
-#include "app_config.h"
-#include "bridge/bridge_manager.h"
-#include "bridge/matter_device.h"
-
 #include <app/server/OnboardingCodesUtil.h>
 #include <app/server/Server.h>
 #include <credentials/DeviceAttestationCredsProvider.h>
@@ -18,6 +14,21 @@
 #include <lib/support/CodeUtils.h>
 #include <platform/CHIPDeviceLayer.h>
 #include <system/SystemError.h>
+
+#include "app_config.h"
+#include "bridge/bridge_manager.h"
+#include "bridge/matter_device_ble.h"
+#include "bridge/matter_device_fixed.h"
+#include "bridge/oob_exchange_manager.h"
+#include "fabric_table_delegate.h"
+#include "uart/nfc_uart.h"
+#include "display.h"
+
+#include "reminders/reminders_app.h"
+
+#if defined(CONFIG_WIFI)
+#include <date_time.h>
+#endif
 
 #ifdef CONFIG_CHIP_WIFI
 #include <app/clusters/network-commissioning/network-commissioning.h>
@@ -76,11 +87,22 @@ constexpr uint32_t kBlinkRate_ms{100};
 }  // namespace LedConsts
 
 #ifdef CONFIG_CHIP_WIFI
-app::Clusters::NetworkCommissioning::Instance
-	sWiFiCommissioningInstance(0, &(NetworkCommissioning::NrfWiFiDriver::Instance()));
+app::Clusters::NetworkCommissioning::Instance sWiFiCommissioningInstance(
+    0, &(NetworkCommissioning::NrfWiFiDriver::Instance()));
 #endif
 
 #include "bridge/config.inc"
+
+
+// Handle repeated card id events
+static volatile bool skipRepeat = false;
+static char lastId[20];
+struct k_work_delayable cardRepeatTimerWork;
+
+static void onCardRepeatTimer(struct k_work *work) {
+  skipRepeat = false;
+}
+
 
 CHIP_ERROR AppTask::Init() {
   /* Initialize CHIP stack */
@@ -121,9 +143,9 @@ CHIP_ERROR AppTask::Init() {
     return err;
   }
 #elif defined(CONFIG_CHIP_WIFI)
-	sWiFiCommissioningInstance.Init();
+  sWiFiCommissioningInstance.Init();
 #else
-	return CHIP_ERROR_INTERNAL;
+  return CHIP_ERROR_INTERNAL;
 #endif /* CONFIG_NET_L2_OPENTHREAD */
   /* Initialize LEDs */
   LEDWidget::InitGpio();
@@ -146,8 +168,6 @@ CHIP_ERROR AppTask::Init() {
 
   k_timer_init(&sBridgeStartTimer, &AppTask::BridgeStartCallback, nullptr);
   k_timer_user_data_set(&sBridgeStartTimer, this);
-  
-
 
 #ifdef CONFIG_CHIP_OTA_REQUESTOR
   /* OTA image confirmation must be done before the factory data init. */
@@ -172,6 +192,7 @@ CHIP_ERROR AppTask::Init() {
 
   ConfigurationMgr().LogDeviceConfig();
   PrintOnboardingCodes(chip::RendezvousInformationFlags(chip::RendezvousInformationFlag::kBLE));
+  AppFabricTableDelegate::Init();
 
   /*
    * Add CHIP event handler and start CHIP thread.
@@ -185,6 +206,11 @@ CHIP_ERROR AppTask::Init() {
     LOG_ERR("PlatformMgr().StartEventLoopTask() failed");
     return err;
   }
+
+  NfcUart::Instance().Init(UartMessageHandler);
+
+  display_init();
+  k_work_init_delayable(&cardRepeatTimerWork, onCardRepeatTimer);
 
   return CHIP_NO_ERROR;
 }
@@ -213,11 +239,24 @@ void AppTask::ButtonEventHandler(uint32_t buttonState, uint32_t hasChanged) {
                                                                   : AppEventType::ButtonReleased);
     button_event.Handler = FunctionHandler;
     PostEvent(button_event);
+  } else if (RECORD_BUTTON_MASK & hasChanged) {
+    LOG_INF("ButtonEventHandler Post Button event RECORD_BUTTON");
+    button_event.ButtonEvent.PinNo = RECORD_BUTTON;
+    button_event.ButtonEvent.Action =
+        static_cast<uint8_t>((RECORD_BUTTON_MASK & buttonState) ? AppEventType::ButtonPushed
+                                                                : AppEventType::ButtonReleased);
+    button_event.Handler = FunctionHandler;
+    PostEvent(button_event);
   }
 }
 
 void AppTask::BridgeStartCallback(k_timer *timer) {
-  InitBridge();
+  chip::DeviceLayer::PlatformMgr().ScheduleWork(
+      [](intptr_t context) {
+        initRemindersApp(display_updateTranscription, display_updateCompletions);
+        InitBridge();
+      },
+      reinterpret_cast<intptr_t>(nullptr));  
 }
 
 void AppTask::FunctionTimerTimeoutCallback(k_timer *timer) {
@@ -244,17 +283,23 @@ void AppTask::FunctionTimerEventHandler(const AppEvent &) {
 }
 
 void AppTask::FunctionHandler(const AppEvent &event) {
-  if (event.ButtonEvent.PinNo != FUNCTION_BUTTON) return;
-
-  if (event.ButtonEvent.Action == static_cast<uint8_t>(AppEventType::ButtonPushed)) {
-    Instance().StartTimer(kFactoryResetTriggerTimeout);
-    Instance().mFunction = FunctionEvent::FactoryReset;
-  } else if (event.ButtonEvent.Action == static_cast<uint8_t>(AppEventType::ButtonReleased)) {
-    if (Instance().mFunction == FunctionEvent::FactoryReset) {
-      UpdateStatusLED();
-      Instance().CancelTimer();
-      Instance().mFunction = FunctionEvent::NoneSelected;
-      LOG_INF("Factory Reset has been Canceled. Init Bridge.");
+  if (event.ButtonEvent.PinNo == FUNCTION_BUTTON) {
+    if (event.ButtonEvent.Action == static_cast<uint8_t>(AppEventType::ButtonPushed)) {
+      Instance().StartTimer(kFactoryResetTriggerTimeout);
+      Instance().mFunction = FunctionEvent::FactoryReset;
+    } else if (event.ButtonEvent.Action == static_cast<uint8_t>(AppEventType::ButtonReleased)) {
+      if (Instance().mFunction == FunctionEvent::FactoryReset) {
+        UpdateStatusLED();
+        Instance().CancelTimer();
+        Instance().mFunction = FunctionEvent::NoneSelected;
+        LOG_INF("Factory Reset has been Canceled. Init Bridge.");
+      }
+    }
+  } else if (event.ButtonEvent.PinNo == RECORD_BUTTON) {
+    if (event.ButtonEvent.Action == static_cast<uint8_t>(AppEventType::ButtonPushed)) {
+      startAiFlow();
+    } else if (event.ButtonEvent.Action == static_cast<uint8_t>(AppEventType::ButtonReleased)) {
+      stopRecording();
     }
   }
 }
@@ -309,20 +354,57 @@ void AppTask::ChipEventHandler(const ChipDeviceEvent *event, intptr_t /* arg */)
       sIsNetworkProvisioned = ConnectivityMgr().IsThreadProvisioned();
       sIsNetworkEnabled = ConnectivityMgr().IsThreadEnabled();
 #elif defined(CONFIG_CHIP_WIFI)
-	case DeviceEventType::kWiFiConnectivityChange:
-		sIsNetworkProvisioned = ConnectivityMgr().IsWiFiStationProvisioned();
-		sIsNetworkEnabled = ConnectivityMgr().IsWiFiStationEnabled();
+    case DeviceEventType::kWiFiConnectivityChange:
+      sIsNetworkProvisioned = ConnectivityMgr().IsWiFiStationProvisioned();
+      sIsNetworkEnabled = ConnectivityMgr().IsWiFiStationEnabled();
 #if CONFIG_CHIP_OTA_REQUESTOR
-		if (event->WiFiConnectivityChange.Result == kConnectivity_Established) {
-			InitBasicOTARequestor();
-		}
+      if (event->WiFiConnectivityChange.Result == kConnectivity_Established) {
+        InitBasicOTARequestor();
+      }
 #endif /* CONFIG_CHIP_OTA_REQUESTOR */
 #endif
       UpdateStatusLED();
-      k_timer_start(&sBridgeStartTimer, K_SECONDS(5), K_NO_WAIT);
+      k_timer_start(&sBridgeStartTimer, K_SECONDS(10), K_NO_WAIT);
       break;
     default:
       break;
+  }
+}
+
+void AppTask::UartMessageHandler(char *buf, uint16_t len) {
+  AppEvent event;
+  event.Type = AppEventType::UartMessage;
+  event.Handler = ParseUartMessageHandler;
+  if (len > sizeof(event.UartEvent.msg)) {
+    LOG_INF("UART message larger than buffer %d > %d:", len, sizeof(event.UartEvent.msg));
+    memcpy(event.UartEvent.msg, buf, sizeof(event.UartEvent.msg));
+    event.UartEvent.msg[sizeof(event.UartEvent.msg) - 1] = 0;
+  } else {
+    memcpy(event.UartEvent.msg, buf, len);
+  }
+  PostEvent(event);
+}
+
+void AppTask::ParseUartMessageHandler(const AppEvent &event) {
+  if (event.Type == AppEventType::UartMessage) {
+    if (strncmp(event.UartEvent.msg, "ID:", 3) == 0) {
+      //  check if the id is the same as the last one
+      if(strncmp(lastId, event.UartEvent.msg, sizeof(lastId)) == 0) {
+        if(skipRepeat) return;
+      }
+      
+      // save the id to compare it to the next one
+      strncpy(lastId, event.UartEvent.msg, sizeof(lastId));
+      skipRepeat = true;
+      k_work_reschedule(&cardRepeatTimerWork, K_SECONDS(5)); 
+
+      // Card Id event
+      LOG_INF("Received card id event: %s", event.UartEvent.msg);
+      cardTriggerAction(event.UartEvent.msg);
+    } else {
+      // OOB event
+      OobExchangeManager::Instance().ExchangeOob((char *)event.UartEvent.msg, NfcUart::SendEntry);
+    }
   }
 }
 
@@ -347,20 +429,28 @@ void AppTask::DispatchEvent(const AppEvent &event) {
 }
 
 void AppTask::InitBridge() {
+
   chip::DeviceLayer::PlatformMgr().ScheduleWork(
       [](intptr_t context) {
-        struct MatterDevice::MatterDeviceConfiguration conf;
+        struct MatterDeviceBle::MatterDeviceConfiguration conf;
         conf.filter = deviceFilter;
         conf.matterBleMapping = matterBleMapping;
         conf.ep = &bridgedPostureEndpoint;
-
-        conf.deviceTypes = &deviceTypes;
-        conf.dataVersions = &dataVersions;
-
+        conf.deviceTypes = &postureDeviceTypesSpan;
+        conf.dataVersions = &postureDataVersionsSpan;
         strncpy(conf.name, "posture", 8);
 
+        // By coincidence the reminders use the same device type and clusters
+        // Try to reuse all the definitions except the name
+        struct MatterDeviceFixed::MatterDeviceConfiguration conf2;
+        conf2.ep = &bridgedPostureEndpoint;
+        conf2.deviceTypes = &postureDeviceTypesSpan;
+        conf2.dataVersions = &postureDataVersionsSpan;
+        strncpy(conf2.name, "reminder", 9);
+
+
         /* Initialize bridge manager */
-        CHIP_ERROR err = BridgeManager::Instance().Init(conf);
+        CHIP_ERROR err = BridgeManager::Instance().Init(conf, conf2);
         if (err != CHIP_NO_ERROR) {
           LOG_ERR("BridgeManager initialization failed");
         } else {

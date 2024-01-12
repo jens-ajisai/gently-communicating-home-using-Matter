@@ -1,19 +1,25 @@
-#include <zephyr/kernel.h>
-
-#if DT_NODE_HAS_COMPAT(DT_CHOSEN(zephyr_console), zephyr_cdc_acm_uart)
-
 #include <zephyr/drivers/gpio.h>
-#include <zephyr/drivers/uart.h>
+#include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/usb/usb_device.h>
+
 LOG_MODULE_REGISTER(usb, CONFIG_MAIN_LOG_LEVEL);
+
+#if DT_NODE_HAS_COMPAT(DT_CHOSEN(zephyr_console), zephyr_cdc_acm_uart)
 
 #define LED0_NODE DT_ALIAS(led0)
 static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 
+#include <zephyr/drivers/uart.h>
+
 /* Delay for console initialization */
+#if defined(CONFIG_USB_DEVICE_INITIALIZE_AT_BOOT)
+#define WAIT_FOR_CONSOLE_MSEC 0
+#define WAIT_FOR_CONSOLE_DEADLINE_MSEC 0
+#else
 #define WAIT_FOR_CONSOLE_MSEC 100
 #define WAIT_FOR_CONSOLE_DEADLINE_MSEC 5000
+#endif
 
 void initGpio() {
   int ret;
@@ -38,7 +44,6 @@ int initUSB() {
   /* Enable the USB subsystem and associated HW */
   if (usb_enable(NULL)) {
     LOG_ERR("Failed to enable USB");
-    return -1;
   } else {
     /* Wait for DTR flag or deadline (e.g. when USB is not connected) */
     while (!dtr && time < WAIT_FOR_CONSOLE_DEADLINE_MSEC) {
@@ -55,5 +60,10 @@ int initUSB() {
   return 0;
 }
 #else
-int initUSB() { return 0; }
+int initUSB() {
+#if defined(CONFIG_USB_DEVICE_STACK)
+  usb_enable(NULL);
+#endif
+  return 0;
+}
 #endif

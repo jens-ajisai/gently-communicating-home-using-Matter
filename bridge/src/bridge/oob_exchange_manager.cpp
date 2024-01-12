@@ -110,15 +110,13 @@ void OobExchangeManager::PrintLeOob(struct bt_le_oob *oob, char *buffer, uint16_
 
 void OobExchangeManager::SetRemoteOob(const char *addr, const char *type, const char *r,
                                       const char *c) {
-  bt_addr_le_t bt_addr;
-
-  int err = bt_addr_le_from_str(addr, type, &bt_addr);
+  int err = bt_addr_le_from_str(addr, type, &bt_addr_remote);
   if (err) {
     LOG_ERR("Invalid peer address (err %d)", err);
     return;
   }
 
-  bt_addr_le_copy(&oob_remote.addr, &bt_addr);
+  bt_addr_le_copy(&oob_remote.addr, &bt_addr_remote);
   hex2bin(r, strlen(r), oob_remote.le_sc_data.r, sizeof(oob_remote.le_sc_data.r));
   hex2bin(c, strlen(c), oob_remote.le_sc_data.c, sizeof(oob_remote.le_sc_data.c));
   bt_le_oob_set_sc_flag(true);
@@ -136,47 +134,20 @@ void OobExchangeManager::GetLocalOob(char *buffer, uint16_t size) {
   PrintLeOob(&oob_local, buffer, size);
 }
 
-K_MSGQ_DEFINE(transportMsgq, OobExchangeManager::oobMessageLen, 2, 4);
+void OobExchangeManager::ExchangeOob(char* receivedOobData, SendOobData sendFunction) {
+  LOG_INF("Received remote oob data: %s", receivedOobData);
 
-void OobExchangeManager::ExchangeOob(OobTransport *transport) {
-  transport->Init(&transportMsgq);
+  char *addr = strtok(receivedOobData, " ");
+  if (addr == NULL) return;
+  char *type = strtok(NULL, " ");
+  if (type == NULL) return;
+  char *r = strtok(NULL, " ");
+  if (r == NULL) return;
+  char *c = strtok(NULL, " ");
+  if (c == NULL) return;
+
+  SetRemoteOob(addr, type, r, c);
   GetLocalOob(localOobMessage, sizeof(localOobMessage));
-  transport->Send(localOobMessage);
-  LOG_INF("Send to UART: %s", localOobMessage);
-
-  // Only the device that requests pairing needs the other sides' OOB data
-  // Below is not necessary.
-
-  char tx_buf[oobMessageLen];
-  while (k_msgq_get(&transportMsgq, &tx_buf, K_MSEC(100)) == 0) {
-    LOG_INF("Received remote oob data: %s", tx_buf);
-
-    char *addr = strtok(tx_buf, " ");
-    if (addr == NULL) continue;
-    char *type = strtok(NULL, " ");
-    if (type == NULL) continue;
-    char *r = strtok(NULL, " ");
-    if (r == NULL) continue;
-    char *c = strtok(NULL, " ");
-    if (c == NULL) continue;
-
-    SetRemoteOob(addr, type, r, c);
-
-    /* Does not fit into flash by over 100KB!
-
-    #include <iterator>
-    #include <sstream>
-    #include <string>
-    #include <vector>
-
-    // https://stackoverflow.com/questions/236129/how-do-i-iterate-over-the-words-of-a-string
-    std::istringstream iss(tx_buf);
-    std::vector<std::string> tokens{std::istream_iterator<std::string>{iss},
-    std::istream_iterator<std::string>{}}; if (tokens.size() == 4) {
-      SetRemoteOob(tokens.at(0).c_str(), tokens.at(1).c_str(), tokens.at(2).c_str(),
-    tokens.at(3).c_str());
-    }
-    */
-  }
-  transport->Deinit();
+  sendFunction(localOobMessage);
+  LOG_INF("Send local OOB data: %s", localOobMessage);
 }

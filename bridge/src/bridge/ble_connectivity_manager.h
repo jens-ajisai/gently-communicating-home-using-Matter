@@ -30,7 +30,6 @@ class BLEConnectivityManager {
   CHIP_ERROR StopScan();
   int Connect(const bt_addr_le_t *addr, const bt_le_conn_param *connParams = BT_LE_CONN_PARAM_DEFAULT);
   int ConnectFirstBondedDevice(void *ctx, ScanCallback cb, DeviceFilter filter);
-  void ExchangeOob();
   
   void StopTimer();
 
@@ -74,6 +73,7 @@ class BLEConnectivityManager {
 
  private:
   CHIP_ERROR PrepareFilterForUuid(bt_uuid *serviceUuid);
+  CHIP_ERROR PrepareFilterForAddr(bt_addr_le_t *addr);
 
   const struct bt_conn_le_create_param *create_param = BT_CONN_LE_CREATE_CONN;
 

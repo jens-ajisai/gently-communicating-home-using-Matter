@@ -111,7 +111,9 @@ int main() {
 
   struct posture_data data;
   int64_t t = 0;
+#if defined(CONFIG_USE_SIMULATION_DATA)
   unsigned int i = 0;
+#endif
 
   while (true) {
     k_sleep(K_MSEC(500));

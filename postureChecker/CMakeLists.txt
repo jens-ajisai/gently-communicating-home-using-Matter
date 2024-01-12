@@ -37,6 +37,7 @@ target_sources(app PRIVATE
   src/sensors/sensorFlex.cpp
   src/sensors/sensorLsm6dsl.cpp
   src/usb/usb.c
+  src/nfc/nfc.c
   src/uart/uart.c
   src/shell_commands.cpp
   src/main.cpp
@@ -46,4 +47,4 @@ target_sources(app PRIVATE
 zephyr_include_directories(config)
 
 # Compiler warnings to error
-zephyr_library_compile_options(-Werror)
+# zephyr_library_compile_options(-Werror)

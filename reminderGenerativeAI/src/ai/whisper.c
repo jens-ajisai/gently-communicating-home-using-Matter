@@ -88,6 +88,8 @@ int request_transcription(const char *path) {
   int ret = 0;
   int port = OPENAI_API_PORT;
 
+  LOG_INF("Request transcription for %s.", path);
+
   if (IS_ENABLED(CONFIG_NET_IPV4)) {
     ret = connect_socket(AF_INET, OPENAI_API_HOST, port, &sock4, (struct sockaddr *)&addr4,
                          sizeof(addr4));

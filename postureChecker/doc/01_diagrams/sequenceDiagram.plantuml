@@ -10,10 +10,12 @@ participant "Sensor Aggregator" as sensors
 participant "BNO08x" as bno
 participant "ADS1015" as adc
 participant "Bluetooth" as bt
+participant "NFC" as nfc
 participant "EI Forwarder" as eif
 participant "Edge Impulse" as ei
 participant "UART" as uart
 
+note over uart: Only for UART OOB procedure
 uart++
 uart -> uart ++ : listen for oob message
 ?-> uart : receive remote oob data message
@@ -24,6 +26,7 @@ uart->bt ++: get local oob data
 bt->uart --
 uart->? : send local oob data message
 uart->uart : exit
+uart--
 uart--
 
 
@@ -57,6 +60,8 @@ bt -> bt : enable bluetooth
 bt -> bt : load settings
 bt -> bt : create local oob keys
 bt -> bt : submit advertisment work
+bt -> nfc++ : init NFC Type 4 Tag\nwith OOB NDEF Message
+nfc --> bt --
 bt --> main --
 
 
@@ -67,15 +72,7 @@ bt --> eif --
 eif -> eif : init uart
 eif --> main --
 
-?-> uart : receive remote oob data message
-uart->uart : parse remote oob data
-uart->bt ++: set remote oob data
-bt->uart --
-uart->bt ++: get local oob data
-bt->uart --
-uart->? : send local oob data message
-uart->uart : exit
-uart--
+note over nfc : NFC Reader reads message\nwithout response
 
 ?-> bt : connection request
 ?-> bt : subscription request

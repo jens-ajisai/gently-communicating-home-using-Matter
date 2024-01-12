@@ -21,6 +21,7 @@ then
     git clone https://github.com/ceva-dsp/sh2.git
     cd sh2/
     git checkout tags/v1.3.0
+    cd ../../scripts
 fi
 
 source 00_config_credentials.sh
