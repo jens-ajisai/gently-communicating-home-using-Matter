@@ -85,10 +85,12 @@ int main() {
 
   Persistence::Instance().init(IS_ENABLED(CONFIG_APP_WIPE_STORAGE));
 
+#if !defined(CONFIG_USE_SIMULATION_DATA)
   SensorLsm6dsl lsm = SensorLsm6dsl();
   SensorBno08x bno = SensorBno08x();
   SensorFlex flex = SensorFlex();
   SensorAggregator agg = SensorAggregator(&bno, &flex, &lsm);
+#endif
 
   bt_init(&app_callbacks);
 
@@ -118,6 +120,15 @@ int main() {
   while (true) {
     k_sleep(K_MSEC(500));
 
+#if defined(CONFIG_USE_SIMULATION_DATA)
+    LOG_INF("Send simulation data");
+    if (i < ARRAY_SIZE(simulation_data)) {
+      ei_wrapper_add_data((float *)&simulation_data[i++],
+                          sizeof(struct posture_data_float) / sizeof(float));
+    } else {
+      i = 0;
+    }
+#else
     int rc = date_time_now(&t);
     if (rc) {
       data.time = (uint32_t)(k_uptime_get() / 1000);
@@ -131,15 +142,6 @@ int main() {
 
     bt_send_posture_data(data);
 
-#if defined(CONFIG_USE_SIMULATION_DATA)
-    LOG_INF("Send simulation data");
-    if (i < ARRAY_SIZE(simulation_data)) {
-      ei_wrapper_add_data((float *)&simulation_data[i++],
-                          sizeof(struct posture_data_float) / sizeof(float));
-    } else {
-      i = 0;
-    }
-#else
     struct posture_data_float float_data = {
         (float)data.flex2, (float)data.flex3, data.roll,   data.pitch,  data.yaw,    data.accel_x,
         data.accel_y,      data.accel_z,      data.magn_x, data.magn_y, data.magn_z,
